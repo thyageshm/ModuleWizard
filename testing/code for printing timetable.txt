@@ -1,0 +1,7 @@
+for Day in newtb.field:
+	print(Day)
+	for Time in (newtb.field[Day]):
+		if len(newtb.field[Day][Time]) > 0:
+			print(Time)
+			for lesson in newtb.field[Day][Time]:
+				print(type(lesson).__name__,"\t",lesson.module,"\t10:15 PM 13/8/2013",lesson.group)

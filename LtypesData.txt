@@ -1,0 +1,13 @@
+{
+	"DESIGN LECTURE": "Tutorial",
+	"LABORATORY": "Tutorial",
+	"LECTURE": "Lecture",
+	"PACKAGED LECTURE": "Lecture",
+	"PACKAGED TUTORIAL": "Lecture",
+	"RECITATION": "Tutorial",
+	"SECTIONAL TEACHING": "Lecture",
+	"SEMINAR-STYLE MODULE CLASS": "Lecture",
+	"TUTORIAL": "Tutorial",
+	"TUTORIAL TYPE 2": "Tutorial",
+	"TUTORIAL TYPE 3": "Tutorial"
+}
