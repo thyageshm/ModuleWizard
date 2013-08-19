@@ -185,7 +185,7 @@ class Lesson(object):
         return self.group
 
     def getId(self):
-        return self.module + self.group
+        return self.module + "_" + type(self).__name__ + "_" + self.group
 
     def getAlternatives(self, timeslot):
         for pg in self:
@@ -271,7 +271,12 @@ class Module(object):
                     raise TypeError("Given 'None' as lesson id")
             except KeyError:
                 raise KeyError("No lesson data provided")
-            
+
+    def getChoices(self):
+        for lec in self.__iter__(Lecture):
+            for tut in self.__iter__(Tutorial):
+                for lab in self.__iter__(Laboratory):
+                    yield((lec,tut,lab));
 
     def __eq__(self, anotherModule):
         return self.getCode() == anotherModule.getCode()
@@ -334,8 +339,11 @@ class Timetable(object):
             else:
                 raise TypeError("Given source parameter is not of type Module or ModuleSet")
 
-    def getSlot(self, day, time):
-        
+    def __iter__(self):
+        for day in self.field.values():
+            yield day;
+    
+    def getSlot(self, day, time):    
         return self.field[day][time]
 
     def __getitem__(self, timeslot):
@@ -414,22 +422,7 @@ class Timetable(object):
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
     
-class possibleTimetables(object):
-    def __init__(self):
-        self.timetables = list()
-
-    def generatePossibleTimetables(self, moduleset):
-        baseTimetable = Timetable()
-        baseTimetable.addModuleSet(moduleset)
-
-        for day in baseTimetable:
-            for timeslot in day:
-                for lesson in timeslot:
-                    if lesson.getAlternativeCount == 1:
-                        timeslot = [lesson]
-                        break
-
-def generateTimetable(modList):
+def generateBaseTimetable(modList):
     filemods = open('modsData.txt')
     fileLtypes = open('LtypesData.txt')
 
@@ -448,10 +441,34 @@ def generateTimetable(modList):
                 newlesson = Laboratory(lesson['ClassNo'],modcode,PeriodGroup(Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText'])))
             else:
                 newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'],modcode,PeriodGroup(Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText'])))
-##            elif  == "Tutorial":
-##                newlesson = Tutorial(lesson['ClassNo'],modcode,PeriodGroup(Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText'])))
             newmod.addLesson(newlesson)
         modSet.addModule(newmod)
 
+##        for choice in newmod.getChoices():
+##            print(choice);
+##        exit
+
     
     return Timetable(modSet)
+
+def generatePossibleTimetables(modList):   
+    baseTT = generateBaseTimetable(modList);
+
+    conflicts = {};
+    for mod in modList:
+        conflicts[mod] = {};
+      
+    ## go through the whole timetable and for each timeslot, create a dict of "conflicts" tuples
+    for day in baseTT:
+        for time in day.values():
+            for lesson in time:
+                conflicts[lesson.getModule()][lesson.getId()] = conflicts[lesson.getModule()].get(lesson.getId(),set()) | set([lesson.getId() for lesson in time]);
+    
+    conflictlist = []
+    for mod in conflicts:
+        conflictlist.append((sum([len(l) for l in conflicts[mod].values()]),mod));
+
+    conflictlist = sorted(conflictlist,reverse = True);
+    for conflictcount,mod in conflictlist:
+        print(mod,conflictcount);
+        
