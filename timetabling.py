@@ -1,4 +1,3 @@
-from collections import namedtuple
 import json
 
 class TimeSlot(object):
@@ -219,11 +218,11 @@ class Laboratory(Lesson):
 ##-----------------------------------------------------------------------------------------------------------------------
     
 class Module(object):
-    def __init__(self, code, *lessons):
-        if not all(issubclass(type(lesson), Lesson) for lesson in lessons):
-            raise TypeError("One or more of the given lessons are not lectures/tutorials")
+    def __init__(self, code):
+        if not isinstance(code,str):
+            raise TypeError("Given code is not of type string!")
 
-        self.lessons = list(lessons)
+        self.lessons = {"Lecture":[],"Tutorial":[],"Laboratory":[]}
         self.code = code
 
     def getOccupingLessonID(self, timeslot):
@@ -235,7 +234,8 @@ class Module(object):
                 yield lesson.getId()
 
     def getLesson(self, Lid):
-        for lesson in self:
+        ## only check in the list of lessons that are of the same type (Lec/Tut/Lab)
+        for lesson in self.lessons[Lid.split("_")[1]]:
             if lesson.getId() == Lid:
                 return lesson
 
@@ -253,20 +253,20 @@ class Module(object):
             internalLesson = self.getLesson(lesson.getId())
             internalLesson.addPeriodGroup(lesson)
         else:
-            self.lessons.append(lesson)
+            self.lessons[lesson.getId().split("_")[1]].append(lesson)
 
     def hasLesson(self,**lessonData):
         try:
             if issubclass(type(lessonData['lesson']),Lesson):
                 lesson = lessonData['lesson']
-                return any(lesson == self_lesson for self_lesson in self)
+                return any(lesson == self_lesson for self_lesson in self.lessons[lesson.getId().split("_")[1]])
             else:
                 raise TypeError("Given parameter is not a valid lesson")
         except KeyError:
             try:
                 if lessonData['lessonid'] !=None:
                     lessonid = lessonData['lessonid']
-                    return any(lessonid == self_lesson for self_lesson in self)
+                    return any(lessonid == self_lesson.getId() for self_lesson in self.lessons[lessonid.split("_")[1]])
                 else:
                     raise TypeError("Given 'None' as lesson id")
             except KeyError:
@@ -282,9 +282,13 @@ class Module(object):
         return self.getCode() == anotherModule.getCode()
 
     def __iter__(self, FilterType=object):
-        for lesson in self.lessons:
-            if issubclass(type(lesson), FilterType):
+        if FilterType != object:
+            for lesson in self.lessons[FilterType.__name__]:
                 yield lesson
+        else:
+            for ltype in self.lessons:
+                for lesson in self.lessons[ltype]:
+                        yield lesson;
 
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
@@ -444,9 +448,9 @@ def generateBaseTimetable(modList):
             newmod.addLesson(newlesson)
         modSet.addModule(newmod)
 
-##        for choice in newmod.getChoices():
-##            print(choice);
-##        exit
+        for choice in newmod.getChoices():
+            print(choice);
+        exit
 
     
     return Timetable(modSet)
