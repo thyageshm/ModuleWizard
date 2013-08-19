@@ -277,11 +277,11 @@ class Module(object):
         except AttributeError:
             self.Baseparams()
             
-        if self.leccount == 1:
+        if (self.leccount == 1 and len(self.lessons["Lecture"]) > 0) or len(self.lessons["Lecture"]) == 1:
             yield self.lessons["Lecture"][0]
-        if self.tutcount == 1:
+        if (self.tutcount == 1 and len(self.lessons["Tutorial"]) > 0) or len(self.lessons["Tutorial"]) == 1:
             yield self.lessons["Tutorial"][0]
-        if self.labcount == 1:
+        if (self.tutcount == 1 and len(self.lessons["Laboratory"]) > 0) or len(self.lessons["Laboratory"]) == 1:
             yield self.lessons["Laboratory"][0]
             
     
@@ -459,8 +459,8 @@ def generateBaseTimetable(modList):
         modSet.addModule(newmod)
 
     baseTT = Timetable(modSet)
-
-    removeConflicts(baseTT,modSet)
+    
+    print(removeConflicts(baseTT,modSet))
     
     return (Timetable(modSet),modSet)
 
@@ -493,17 +493,7 @@ def generatePossibleTimetables(modList):
         for time in day.values():
             if len(time) > 1:
                 for lesson in time:
-                    conflictlist[lesson.getModule()][lesson.getId()] = conflictlist[lesson.getModule()].get(lesson.getId(),set()) | set([lesson.getId() for lesson in time]);
-    
-    conflictcount = []
-    for mod in conflictlist:
-        conflictcount.append((modSet.getModule(mod).getNumChoices(),modSet.getModule(mod)));
-    ## arrange them in ascending order
-    conflictcount = sorted(conflictcount,reverse=True);
-    
-    for count,mod in conflictcount:
-        print(mod.getCode(),count);
-    
+                    conflictlist[lesson.getModule()][lesson.getId()] = conflictlist[lesson.getModule()].get(lesson.getId(),set()) | set([lesson_temp.getId() for lesson_temp in time if lesson_temp != lesson]);
 ##    for mod in conflictlist:
 ##        print(mod)
 ##        print()
@@ -511,26 +501,37 @@ def generatePossibleTimetables(modList):
 ##            print(Lid," ",conflictlist[mod][Lid])
 ##        print()
 ##        print()
-        
-##    count = 1;
-##    for c,mod in conflictcount:
-##        print(mod.getNumChoices())
-##        count*=mod.getNumChoices()
+
+    conflictcount = [mod for mod in modSet]
     
-##    print(count)
-        clock()
-    print(CountPossible(conflictlist,conflictcount,len(modList)));
+    ## arrange them in ascending order by choices available
+    conflictcount = sorted(conflictcount,key=lambda mod:mod.getNumChoices(),reverse=True);
+    
+    for mod in conflictcount:
+        print(mod.getCode(),mod.getNumChoices());
+
+    clock()
+    for s in CountPossible(conflictlist,conflictcount,len(modList)):
+        print(s)
+        break
     print(clock())
 
-def CountPossible(conflist,confs,modcount,setc = set()):
+def CountPossible(conflist,confs,modcount,setclash = set(),setcur = set()):
 ##    print(setc);
 ##    print();
-    count = 0;
-    curconflict = conflist[confs[modcount-1][1].getCode()]
+##    count = 0;
+    curconflict = conflist[confs[modcount-1].getCode()]
     if modcount == 1:
-        for choice in confs[modcount-1][1].getChoices(setc):
-            count += 1;
+        for choice in confs[modcount-1].getChoices(setclash):
+            yield (setcur | choice)
+##            count += 1;
     else:
-        for choice in confs[modcount-1][1].getChoices(setc):
-            count += CountPossible(conflist,confs,modcount-1,(setc|set.union(*[curconflict.get(i,set()) for i in choice])))
-    return count;
+        for choice in confs[modcount-1].getChoices(setclash):        
+            for s in CountPossible(conflist,confs,modcount-1,(setclash|set.union(*[curconflict.get(i,set()) for i in choice])),setcur | choice):
+                yield s
+
+        if setcur == set():
+            yield "No Possible TT!"
+        
+##count +=  
+##    return count;
