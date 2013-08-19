@@ -447,6 +447,12 @@ def generateBaseTimetable(modList):
                 newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'],modcode,PeriodGroup(Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText'])))
             newmod.addLesson(newlesson)
         modSet.addModule(newmod)
+
+        for choice in newmod.getChoices():
+            print(choice);
+        exit
+
+    
     return Timetable(modSet)
 
 def generatePossibleTimetables(modList):   
@@ -469,3 +475,4 @@ def generatePossibleTimetables(modList):
     conflictlist = sorted(conflictlist,reverse = True);
     for conflictcount,mod in conflictlist:
         print(mod,conflictcount);
+        
