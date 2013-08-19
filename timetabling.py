@@ -1,5 +1,5 @@
 import json
-
+from time import clock
 class TimeSlot(object):
     def __init__(self, day, time):
         self.day = day
@@ -169,13 +169,35 @@ class Lesson(object):
         for pg in self.periodgroups:
             yield pg
 
-    def __eq__(self, anotherLesson):
-        return self.getId() == anotherLesson.getId()
+    def __eq__(self, other):
+        return self.getId() == other.getId()
+    def __lt__(self, other):
+        return self.getId() < other.getId()
+    def __le__(self, other):
+        return self.getId() <= other.getId()
+    def __ne__(self, other):
+        return self.getId() != other.getId()
+    def __gt__(self, other):
+        return self.getId() > other.getId()
+    def __ge__(self, other):
+        return self.getId() >= other.getId()
 
     def hasSlot(self, timeslot):
         if type(timeslot) != TimeSlot:
             raise TypeError("Given parameter is not of type TimeSlot")
         return any(periodgroup.hasSlot(timeslot) for periodgroup in self.periodgroups)
+
+    def getOccupyingPeriodGroups(self,timeslot):
+        for pg in self:
+            if pg.hasSlot(timeslot):
+                yield pg
+
+    def removePeriodGroup(self,pg):
+        for self_pg in self:
+            if self_pg == pg:
+                self.periodgroups.remove(pg)
+                self.alternatives -= 1
+                return
 
     def getModule(self):
         return self.module
@@ -201,16 +223,24 @@ class Lesson(object):
     
 class Lecture(Lesson):
     def __init__(self, group, module, *periodgroups):
-        Lesson.__init__(self,group, module, periodgroups[0])
-
+        if len(periodgroups) > 0:
+            Lesson.__init__(self,group, module, periodgroups[0])
+        else:
+            Lesson.__init__(self,group, module)
 
 class Tutorial(Lesson):
     def __init__(self, group, module, *periodgroups):
-        Lesson.__init__(self,group, module, periodgroups[0])
+        if len(periodgroups) > 0:
+            Lesson.__init__(self,group, module, periodgroups[0])
+        else:
+            Lesson.__init__(self,group, module)
 
 class Laboratory(Lesson):
     def __init__(self, group, module, *periodgroups):
-        Lesson.__init__(self,group, module, periodgroups[0])
+        if len(periodgroups) > 0:
+            Lesson.__init__(self,group, module, periodgroups[0])
+        else:
+            Lesson.__init__(self,group, module)
 
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
@@ -239,6 +269,9 @@ class Module(object):
             if lesson.getId() == Lid:
                 return lesson
 
+    def getNumChoices(self):
+        return (1 if 0 == self.leccount else len(self.lessons["Lecture"])) * (1 if 0 == self.tutcount else len(self.lessons["Tutorial"])) * (1 if 0 == self.labcount else len(self.lessons["Laboratory"]))
+    
     def getCode(self):
         return self.code
 
@@ -254,6 +287,15 @@ class Module(object):
             internalLesson.addPeriodGroup(lesson)
         else:
             self.lessons[lesson.getId().split("_")[1]].append(lesson)
+
+    def removeLesson(self,lesson):
+        if not issubclass(type(lesson), Lesson):
+            raise TypeError("Given parameter is not a lesson")
+
+        if self.code != lesson.getModule():
+            raise TypeError("Given Lesson does not belong to this Module")
+
+        self.lessons[type(lesson).__name__].remove(lesson);
 
     def hasLesson(self,**lessonData):
         try:
@@ -272,22 +314,40 @@ class Module(object):
             except KeyError:
                 raise KeyError("No lesson data provided")
 
-    def getChoices(self):
-        for lec in self.__iter__(Lecture):
-            for tut in self.__iter__(Tutorial):
-                for lab in self.__iter__(Laboratory):
-                    yield((lec,tut,lab));
+    def getChoices(self,setc):
+        for lec in (self.__iter__(Lecture,setc) if self.leccount > 0 else [Lecture("Test","Test")]):
+            for tut in (self.__iter__(Tutorial,setc) if self.tutcount > 0 else [Tutorial("Test","Test")]):
+                for lab in (self.__iter__(Laboratory,setc) if self.labcount > 0 else [Laboratory("Test","Test")]):
+                    yield set((lec.getId(),tut.getId(),lab.getId()));
+                
+    ## this function is used to set the count of lessons in the actual module as to optimise we would be removing some of the lessons prematurely
+    def setBaseparams(self):
+        self.leccount = len(self.lessons["Lecture"])
+        self.tutcount = len(self.lessons["Tutorial"])
+        self.labcount = len(self.lessons["Laboratory"])
+    
+    def __eq__(self, other):
+        return self.getCode() == other.getCode()
+    def __lt__(self, other):
+        return self.getCode() < other.getCode()
+    def __le__(self, other):
+        return self.getCode() <= other.getCode()
+    def __ne__(self, other):
+        return self.getCode() != other.getCode()
+    def __gt__(self, other):
+        return self.getCode() > other.getCode()
+    def __ge__(self, other):
+        return self.getCode() >= other.getCode()
 
-    def __eq__(self, anotherModule):
-        return self.getCode() == anotherModule.getCode()
-
-    def __iter__(self, FilterType=object):
+    def __iter__(self, FilterType=object,FilterList=set()):
         if FilterType != object:
             for lesson in self.lessons[FilterType.__name__]:
-                yield lesson
+                if lesson.getId() not in FilterList:
+                    yield lesson
         else:
             for ltype in self.lessons:
                 for lesson in self.lessons[ltype]:
+                    if lesson.getId() not in FilterList :
                         yield lesson;
 
 ##-----------------------------------------------------------------------------------------------------------------------
@@ -310,13 +370,19 @@ class ModuleSet(object):
     def addModule(self, module):
         if not type(module) == Module:
             raise TypeError("The given parameter is not of type Module")
-
+        
+        module.setBaseparams()
         self.modules.append(module)
 
     def removeModule(self, code):
         for module in self:
             if module.getCode() == code:
                 self.modules.remove(module)
+    
+    def getModule(self,code):
+        for module in self:
+            if module.getCode() == code:
+                return module;
 
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
@@ -395,20 +461,26 @@ class Timetable(object):
 
         self[timeslot].append(lesson)
 
-    def removeLessonT(self, timeslot, lessonid):
+    def removeLessonT(self, timeslot, lesson):
         Slot = self[timeslot]
 
-        for lesson in Slot:
-            if lesson.getId() == lessonid:
+        for self_lesson in Slot:
+            if self_lesson == lesson:
                 Slot.remove(lesson);
 
-    def removeLessonP(self, period, lessonid):
+    def removeLessonP(self, period, lesson):
         for timeslot in period:
-            self.removeLessonT(timeslot, lessonid)
+            self.removeLessonT(timeslot, lesson)
 
-    def removeLessonPG(self, periodgroup, lessonid):
-        for period in periodgroup:
-            self.removeLessonP(period, lessonid)
+    def removeLessonPG(self, pg, lesson):
+        if type(pg_ts) == PeriodGroup:
+            for period in periodgroup:
+                self.removeLessonP(period, lesson)
+            
+
+    def removeLesson(self,lesson):
+        for pg in lesson:
+            self.removeLessonPG(pg,lesson)
 
     def getLessonsCount(self, timeslot):
         return len(self[timeslot])
@@ -448,31 +520,83 @@ def generateBaseTimetable(modList):
             newmod.addLesson(newlesson)
         modSet.addModule(newmod)
 
-        for choice in newmod.getChoices():
-            print(choice);
-        exit
+    baseTT = Timetable(modSet)
 
+    print(removeConflicts(baseTT))
     
-    return Timetable(modSet)
+    return (Timetable(modSet),modSet)
+
+def removeConflicts(baseTT):
+    flag = False
+
+    for day in baseTT:
+        for time in day.values():
+            if len(time) > 1:
+                for lesson in time:
+                    if lesson.getAlternativeCount() == 1:
+                        for lesson_del in time:
+                            for pg in lesson_del.getOccupyingPeriodGroups(TimeSlot(day,time)):
+                                if lesson_del != lesson:
+                                    baseTT.removeLessonPG(pg ,lesson_del)
+                                    lesson_del.removePG(pg)
+                                    flag = True
+                        break
+
+    if flag:
+        return (removeConflicts(baseTT) + 1)
+    else:
+        return 1
 
 def generatePossibleTimetables(modList):   
-    baseTT = generateBaseTimetable(modList);
+    baseTT,modSet = generateBaseTimetable(modList);
 
-    conflicts = {};
+    conflictlist = {};
     for mod in modList:
-        conflicts[mod] = {};
+        conflictlist[mod] = {};
       
     ## go through the whole timetable and for each timeslot, create a dict of "conflicts" tuples
     for day in baseTT:
         for time in day.values():
-            for lesson in time:
-                conflicts[lesson.getModule()][lesson.getId()] = conflicts[lesson.getModule()].get(lesson.getId(),set()) | set([lesson.getId() for lesson in time]);
+            if len(time) > 1:
+                for lesson in time:
+                    conflictlist[lesson.getModule()][lesson.getId()] = conflictlist[lesson.getModule()].get(lesson.getId(),set()) | set([lesson.getId() for lesson in time]);
     
-    conflictlist = []
-    for mod in conflicts:
-        conflictlist.append((sum([len(l) for l in conflicts[mod].values()]),mod));
-
-    conflictlist = sorted(conflictlist,reverse = True);
-    for conflictcount,mod in conflictlist:
-        print(mod,conflictcount);
+    conflictcount = []
+    for mod in conflictlist:
+        conflictcount.append((pow(modSet.getModule(mod).getNumChoices(),2)/(1+sum([len(l) for l in conflictlist[mod].values()])),modSet.getModule(mod)));
+    ## arrange them in ascending order
+    conflictcount = sorted(conflictcount,reverse=True);
+    
+    for count,mod in conflictcount:
+        print(mod.getCode(),count);
+    
+##    for mod in conflictlist:
+##        print(mod)
+##        print()
+##        for Lid in conflictlist[mod]:
+##            print(Lid," ",conflictlist[mod][Lid])
+##        print()
+##        print()
         
+##    count = 1;
+##    for c,mod in conflictcount:
+##        print(mod.getNumChoices())
+##        count*=mod.getNumChoices()
+    
+##    print(count)
+        clock()
+    print(CountPossible(conflictlist,conflictcount,len(modList)));
+    print(clock())
+
+def CountPossible(conflist,confs,modcount,setc = set()):
+##    print(setc);
+##    print();
+    count = 0;
+    curconflict = conflist[confs[modcount-1][1].getCode()]
+    if modcount == 1:
+        for choice in confs[modcount-1][1].getChoices(setc):
+            count += 1;
+    else:
+        for choice in confs[modcount-1][1].getChoices(setc):
+            count += CountPossible(conflist,confs,modcount-1,(setc|set.union(*[curconflict.get(i,set()) for i in choice])))
+    return count;
