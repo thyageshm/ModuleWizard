@@ -85,6 +85,12 @@ class Period(object):
             # check if either the start or the end of one of the periods is between the start and the end of the other
             return (anotherPeriod.timeslots[0][1] <= self.timeslots[0][1] <= anotherPeriod.timeslots[-1][1]) or (
             anotherPeriod.timeslots[0][1] <= self.timeslots[-1][1] <= anotherPeriod.timeslots[-1][1])
+
+    def getStart(self):
+        return self.timeslots[0];
+
+    def getEnd(self):
+        return self.timeslots[-1];
     
     def __str__(self):
         message = ""
@@ -93,6 +99,9 @@ class Period(object):
             message += str(t)
 
         return message
+
+    def __eq__(self,period):
+        return self.getStart() == period.getStart() and self.getEnd() == period.getEnd()
 
     def __iter__(self):
         for timeslot in self.timeslots:
@@ -109,9 +118,9 @@ class Lesson(object):
             raise TypeError("One or more of the parameters given is not of type Period")
         
         self.periods = list(periods)
-
         self.group = group
         self.module = module
+        self.alternatives = []
 
     def addPeriod(self, *sources):
         if not all((type(source) == Period or issubclass(type(source),Lesson)) for source in sources):
@@ -123,6 +132,13 @@ class Lesson(object):
             elif issubclass(type(source),Lesson):
                 for period in source:
                     self.periods.append(period)
+
+    def addAlternative(self,*alts):
+        if not all(type(alt) == type(self) for alt in alts):
+            raise TypeError("One or more of the given parameters is not of the same type as this lesson")
+
+        for alt in alts:
+            self.alternatives.append(alt)
 
     def hasSlot(self, timeslot):
         if type(timeslot) != TimeSlot:
@@ -138,7 +154,25 @@ class Lesson(object):
     def getId(self):
         return self.module + "_" + type(self).__name__ + "_" + self.group
 
+    def getAlternatives(self):
+        for lesson in self.alternatives:
+            yield lesson
+
+    def getAlternativeCount(self):
+        return len(self.alternatives)
+
+    def isAlternative(self,lesson):
+        ##return set(self.periods) == set(lesson.periods)
+        if len(self.periods) == len(lesson.periods):
+            return all(selfp == lessonp for selfp,lessonp in zip(lesson,self))
+        else:
+            return False
+
 ##   Special functions:
+
+    def __str__(self):
+        return "ID: "+self.getId()
+    
     def __iter__(self):
         for period in self.periods:
             yield period
@@ -204,8 +238,13 @@ class Module(object):
         if self.hasLesson(lesson=lesson):
             internalLesson = self.getLesson(lesson.getId())
             internalLesson.addPeriod(lesson)
+            ## what if we had a partially completed lesson which has an alternative?
+            if self.hasAlternativeLesson(lesson):
+                self.removeLesson(lesson)
+            
         else:
-            self.lessons[lesson.getId().split("_")[1]].append(lesson)
+            if not self.hasAlternativeLesson(lesson):
+                self.lessons[lesson.getId().split("_")[1]].append(lesson)
 
     def removeLesson(self,lesson):
         if not issubclass(type(lesson), Lesson):
@@ -215,6 +254,13 @@ class Module(object):
             raise TypeError("Given Lesson does not belong to this Module")
 
         self.lessons[type(lesson).__name__].remove(lesson);
+
+    def hasAlternativeLesson(self,lesson):
+        for self_lesson in self.__iter__(type(lesson)):
+            if self_lesson != lesson and self_lesson.isAlternative(lesson):
+                self_lesson.addAlternative(lesson)
+                return True
+        return False
 
     def hasLesson(self,**lessonData):
         try:
@@ -252,7 +298,7 @@ class Module(object):
             for timeslot in period:
                 for lesson in self.getOccupyingLesson(timeslot):
                     yield lesson
-
+    
     def getLesson(self, Lid):
         ## only check in the list of lessons that are of the same type (Lec/Tut/Lab)
         for lesson in self.lessons[Lid.split("_")[1]]:
@@ -432,6 +478,15 @@ class Timetable(object):
     def getLessonsCount(self, timeslot):
         return len(self[timeslot])
 
+    def print(self):
+        for day in self.field:
+            print (day)
+            for time in self.field[day]:
+                if len(self.field[day][time]) > 0:
+                    print(time,len(self.field[day][time]))
+                    ##for lesson in self.field[day][time]:
+                      ##  print(lesson.getId())
+
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
@@ -485,15 +540,18 @@ def generatePossibleTimetables(modList):
     baseTT,modSet = generateBaseTimetable(modList);
 
     conflictlist = {};
-    for mod in modList:
-        conflictlist[mod] = {};
+    confmodcount = {};
       
-    ## go through the whole timetable and for each timeslot, create a dict of "conflicts" tuples
+    ## go through the whole timetable and for each timeslot, create a dict of "conflicts" sets
+    clock()
     for day in baseTT:
         for time in day.values():
             if len(time) > 1:
                 for lesson in time:
-                    conflictlist[lesson.getModule()][lesson.getId()] = conflictlist[lesson.getModule()].get(lesson.getId(),set()) | set([lesson_temp.getId() for lesson_temp in time if lesson_temp != lesson]);
+                    conflictlist[lesson.getId()] = conflictlist.get(lesson.getId(),set()) | set([lesson_temp.getId() for lesson_temp in time if lesson_temp != lesson]);
+                    confmodcount[lesson.getModule()] = confmodcount.get(lesson.getModule(),0) + 1
+    print(clock())
+     
 ##    for mod in conflictlist:
 ##        print(mod)
 ##        print()
@@ -502,36 +560,44 @@ def generatePossibleTimetables(modList):
 ##        print()
 ##        print()
 
-    conflictcount = [mod for mod in modSet]
+    calcmodSet = []
+    for mod in modSet:
+        calcmodSet.append((mod.getNumChoices()/confmodcount.get(mod.getCode(),1),mod))
     
     ## arrange them in ascending order by choices available
-    conflictcount = sorted(conflictcount,key=lambda mod:mod.getNumChoices(),reverse=True);
+    sortedmodSet = sorted(calcmodSet,reverse=True);
+    for count,mod in sortedmodSet:
+        print(mod.getCode(),count);
+    sortedmodSet = [mod for count,mod in sortedmodSet]
     
-    for mod in conflictcount:
-        print(mod.getCode(),mod.getNumChoices());
+    return
+    print(CountPossible(conflictlist,sortedmodSet,len(modList)))
+    
 
-    clock()
-    for s in CountPossible(conflictlist,conflictcount,len(modList)):
-        print(s)
-        break
-    print(clock())
-
-def CountPossible(conflist,confs,modcount,setclash = set(),setcur = set()):
-##    print(setc);
-##    print();
-##    count = 0;
-    curconflict = conflist[confs[modcount-1].getCode()]
+## a recursive function that loops through all the available modules/lessons
+def CountPossible(conflist,sortedmodSet,modcount,setclash = set(),setcur = set()):
+    count = 0;
+    curconflict = conflist
     if modcount == 1:
-        for choice in confs[modcount-1].getChoices(setclash):
-            yield (setcur | choice)
-##            count += 1;
+        for choice in sortedmodSet[modcount-1].getChoices(setclash):
+##            yield (setcur | choice)
+            count += 1;
     else:
-        for choice in confs[modcount-1].getChoices(setclash):        
-            for s in CountPossible(conflist,confs,modcount-1,(setclash|set.union(*[curconflict.get(i,set()) for i in choice])),setcur | choice):
-                yield s
+        for choice in sortedmodSet[modcount-1].getChoices(setclash):
+            count+= CountPossible(conflist,sortedmodSet,modcount-1,(setclash|set.union(*[curconflict.get(i,set()) for i in choice])),setcur | choice)
+##            for s in
+##                yield s
 
-        if setcur == set():
-            yield "No Possible TT!"
-        
-##count +=  
-##    return count;
+##        if setcur == set():
+##            yield "No Possible TT!"
+
+    return count;
+
+def countAlternatives(modSet):
+    count = 0;
+
+    for mod in modSet:
+        for lesson in mod:
+            count+=lesson.getAlternativeCount()
+
+    print(count)
