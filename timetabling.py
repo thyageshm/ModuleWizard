@@ -552,14 +552,14 @@ def generatePossibleTimetables(modList):
                     confmodcount[lesson.getModule()] = confmodcount.get(lesson.getModule(),0) + 1
     print(clock())
      
-##    for mod in conflictlist:
-##        print(mod)
-##        print()
-##        for Lid in conflictlist[mod]:
-##            print(Lid," ",conflictlist[mod][Lid])
-##        print()
-##        print()
-
+    for mod in conflictlist:
+        print(mod)
+        print()
+        for Lid in conflictlist[mod]:
+            print(Lid," ",conflictlist[mod])
+        print()
+        print()
+    return 1;
     calcmodSet = []
     for mod in modSet:
         calcmodSet.append((mod.getNumChoices()/confmodcount.get(mod.getCode(),1),mod))
@@ -570,28 +570,29 @@ def generatePossibleTimetables(modList):
         print(mod.getCode(),count);
     sortedmodSet = [mod for count,mod in sortedmodSet]
     
-    return
     print(CountPossible(conflictlist,sortedmodSet,len(modList)))
     
 
 ## a recursive function that loops through all the available modules/lessons
 def CountPossible(conflist,sortedmodSet,modcount,setclash = set(),setcur = set()):
-    count = 0;
+    count = False;
     curconflict = conflist
     if modcount == 1:
         for choice in sortedmodSet[modcount-1].getChoices(setclash):
+            print(setcur | choice);
+            return True;
 ##            yield (setcur | choice)
-            count += 1;
+##            count += 1;
     else:
         for choice in sortedmodSet[modcount-1].getChoices(setclash):
             count+= CountPossible(conflist,sortedmodSet,modcount-1,(setclash|set.union(*[curconflict.get(i,set()) for i in choice])),setcur | choice)
-##            for s in
-##                yield s
+            if(count == True):
+                return True;
 
 ##        if setcur == set():
 ##            yield "No Possible TT!"
-
-    return count;
+    return False;
+##    return count;
 
 def countAlternatives(modSet):
     count = 0;
