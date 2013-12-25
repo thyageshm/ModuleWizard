@@ -321,7 +321,7 @@ class Module(object):
         try:
             self.leccount = self.leccount
         except AttributeError:
-            self.Baseparams()
+            self.setBaseparams()
             
         if (self.leccount == 1 and len(self.lessons["Lecture"]) > 0) or len(self.lessons["Lecture"]) == 1:
             yield self.lessons["Lecture"][0]
@@ -344,15 +344,15 @@ class Module(object):
     def __ge__(self, other):
         return self.getCode() >= other.getCode()
 
-    def __iter__(self, FilterType=object,FilterList=set()):
+    def __iter__(self, FilterType=object,ExcludeList=set()):
         if FilterType != object:
             for lesson in self.lessons[FilterType.__name__]:
-                if lesson.getId() not in FilterList:
+                if lesson.getId() not in ExcludeList:
                     yield lesson
         else:
             for ltype in self.lessons:
                 for lesson in self.lessons[ltype]:
-                    if lesson.getId() not in FilterList :
+                    if lesson.getId() not in ExcludeList :
                         yield lesson;
 
 ##-----------------------------------------------------------------------------------------------------------------------
@@ -491,8 +491,8 @@ class Timetable(object):
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
-    
-def generateBaseTimetable(modList):
+
+def loadAllModData():
     filemods = open('modsData.txt')
     fileLtypes = open('LtypesData.txt')
 
@@ -503,7 +503,7 @@ def generateBaseTimetable(modList):
     fileLtypes.close()
 
     modSet = ModuleSet()
-    for modcode in modList:
+    for modcode in modsJson.keys():
         newmod = Module(modcode)
         for lesson in modsJson[modcode]['Timetable']:
             if lesson['LessonType'] == 'LABORATORY':
@@ -513,11 +513,20 @@ def generateBaseTimetable(modList):
             newmod.addLesson(newlesson)
         modSet.addModule(newmod)
 
+    return modSet
+    
+
+def generateBaseTimetable(modList,masterModSet):
+    
+    modSet = ModuleSet()
+    for modcode in modList:
+        newmod = masterModSet.getModule(modcode)        
+        modSet.addModule(newmod)
+
     baseTT = Timetable(modSet)
+    removeConflicts(baseTT,modSet)
     
-    print(removeConflicts(baseTT,modSet))
-    
-    return (Timetable(modSet),modSet)
+    return (baseTT,modSet)
 
 def removeConflicts(baseTT,modSet):
     flag = False
@@ -536,63 +545,66 @@ def removeConflicts(baseTT,modSet):
     else:
         return 1
 
-def generatePossibleTimetables(modList):   
-    baseTT,modSet = generateBaseTimetable(modList);
+def generatePossibleModules(modList,masterModSet):
 
-    conflictlist = {};
-    confmodcount = {};
-      
-    ## go through the whole timetable and for each timeslot, create a dict of "conflicts" sets
-    clock()
-    for day in baseTT:
-        for time in day.values():
-            if len(time) > 1:
-                for lesson in time:
-                    conflictlist[lesson.getId()] = conflictlist.get(lesson.getId(),set()) | set([lesson_temp.getId() for lesson_temp in time if lesson_temp != lesson]);
-                    confmodcount[lesson.getModule()] = confmodcount.get(lesson.getModule(),0) + 1
-    print(clock())
-     
-    for mod in conflictlist:
-        print(mod)
-        print()
-        for Lid in conflictlist[mod]:
-            print(Lid," ",conflictlist[mod])
-        print()
-        print()
-    return 1;
-    calcmodSet = []
-    for mod in modSet:
-        calcmodSet.append((mod.getNumChoices()/confmodcount.get(mod.getCode(),1),mod))
-    
-    ## arrange them in ascending order by choices available
-    sortedmodSet = sorted(calcmodSet,reverse=True);
-    for count,mod in sortedmodSet:
-        print(mod.getCode(),count);
-    sortedmodSet = [mod for count,mod in sortedmodSet]
-    
-    print(CountPossible(conflictlist,sortedmodSet,len(modList)))
-    
+    possibleMods = []
+
+    for currentMod in masterModSet:
+        if modList.count(currentMod.getCode()) > 0:
+            continue
+        modList.append(currentMod.getCode())
+        baseTT,modSet = generateBaseTimetable(modList,masterModset);
+
+        conflictlist = {};
+##        confmodcount = {};
+          
+        ## go through the whole timetable and for each timeslot, create a dict of "conflicts" sets
+        clock()
+        for day in baseTT:
+            for time in day.values():
+                if len(time) > 1:
+                    for lesson in time:
+                        conflictlist[lesson.getId()] = conflictlist.get(lesson.getId(),set()) | set([lesson_temp.getId() for lesson_temp in time if lesson_temp != lesson]);
+##                        confmodcount[lesson.getModule()] = confmodcount.get(lesson.getModule(),0) + 1
+        print(clock())
+
+
+##        calcmodSet = []
+##        for mod in modSet:
+##            calcmodSet.append((mod.getNumChoices()/confmodcount.get(mod.getCode(),1),mod))
+##        
+##        ## arrange them in ascending order by choices available
+##        sortedmodSet = sorted(calcmodSet,reverse=True);
+##        for count,mod in sortedmodSet:
+##            print(mod.getCode(),count);
+##
+##        sortedmodSet = [mod for count,mod in sortedmodSet]
+
+        sortedmodSet= modSet
+        if(HasPossibleTimetable(conflictlist,sortedmodSet,len(modList))):
+            possibleMods.append(currentMod.getCode())
+
+        modList.remove(currentMod.getCode())
+        
+    print (possibleMods)
+    return possibleMods
 
 ## a recursive function that loops through all the available modules/lessons
-def CountPossible(conflist,sortedmodSet,modcount,setclash = set(),setcur = set()):
-    count = False;
+def HasPossibleTimetable(conflist,sortedmodSet,modcount,setclash = set(),setcur = set()):
+    count = False
     curconflict = conflist
+    
     if modcount == 1:
         for choice in sortedmodSet[modcount-1].getChoices(setclash):
-            print(setcur | choice);
-            return True;
-##            yield (setcur | choice)
-##            count += 1;
+            ##print(setcur | choice);
+            return True
     else:
         for choice in sortedmodSet[modcount-1].getChoices(setclash):
-            count+= CountPossible(conflist,sortedmodSet,modcount-1,(setclash|set.union(*[curconflict.get(i,set()) for i in choice])),setcur | choice)
+            count+= HasPossibleTimetable(conflist,sortedmodSet,modcount-1,(setclash|set.union(*[curconflict.get(i,set()) for i in choice])),setcur | choice)
             if(count == True):
-                return True;
-
-##        if setcur == set():
-##            yield "No Possible TT!"
-    return False;
-##    return count;
+                return True
+            
+    return False
 
 def countAlternatives(modSet):
     count = 0;
