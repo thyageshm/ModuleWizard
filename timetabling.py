@@ -473,7 +473,7 @@ def loadAllModData():
     noTimetableModCount = 0
     
     for modData in modsJson:
-        modcode = modData['ModuleCode']
+        modcode = str(modData['ModuleCode'])
         examDate = modData.get('ExamDate','')
         modDept = modData.get('Department','')
         newmod = Module(modcode,examDate,modDept)
