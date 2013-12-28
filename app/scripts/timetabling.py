@@ -60,7 +60,7 @@ class Period(object):
 
         self.weeks = weeks
 
-    def addTimeSlot(self, *source):
+    def addTimeSlot(self, *sources):
         if not all((type(source) == TimeSlot or type(source) == Period) for source in sources):
             raise TypeError("One of the given parameter was not an acceptable source for periods (eg Periods, TimeSlots)")
         
@@ -429,7 +429,7 @@ timeRestrictions = []
 for day,time in timeRestrictionPairs:
     timeRestrictions.append(TimeSlot(day,time))
 
-def checkModuleAdding(testCode):
+def checkModuleAdding(testCode, noTimetableModCount):
     filemods = open('modsData.txt')
     fileLtypes = open('LtypesData.txt')
 
@@ -578,5 +578,5 @@ modList,testMods = generatePossibleModules(modCodeList,loadedData)
 for mod in testMods:
     for l in mod.getCompulsoryLessons():
         print(l)
-##mod = checkModuleAdding("YLS1201")
+##mod = checkModuleAdding("YLS1201", 0)
 ##mod.setBaseparams()
