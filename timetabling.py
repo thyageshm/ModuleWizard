@@ -68,6 +68,7 @@ class Period(object):
             elif type(source) == Period:
                 for timeslot in source:
                     self.periods.append(timeslot)
+    
     def hasSlot(self, timeslot):
         if type(timeslot) != TimeSlot:
             raise TypeError("Given parameter is not of type TimeSlot")
@@ -391,8 +392,6 @@ class ModuleSet(object):
 
     def removeModule(self, code):
         module = self.getModule(code)
-        if(code == "BN4101R"):
-            print(module)
         if module:
             self.modules.remove(module)
             self.count -= 1
@@ -533,10 +532,10 @@ def checkModuleAdding(testCode):
         try:
             for lesson in modData['Timetable']:
                 if lesson['LessonType'] == 'LABORATORY':
-                    newlesson = Laboratory(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText']))
+                    newlesson = Laboratory(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=dayToInt[lesson['DayText']]))
                 else:
                     print(lesson['LessonType'])
-                    newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText']))
+                    newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=dayToInt[lesson['DayText']]))
                 newmod.addLesson(newlesson)
         except KeyError:
             noTimetableModCount += 1
@@ -568,9 +567,9 @@ def loadAllModData():
         try:
             for lesson in modData['Timetable']:
                 if lesson['LessonType'] == 'LABORATORY':
-                    newlesson = Laboratory(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText']))
+                    newlesson = Laboratory(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=dayToInt[lesson['DayText']]))
                 else:
-                    newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText']))
+                    newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=dayToInt[lesson['DayText']]))
                 newmod.addLesson(newlesson)
         except KeyError:
             noTimetableModCount += 1
@@ -590,26 +589,9 @@ def generateBaseTimetable(modList,masterModset):
     
     return (baseTT,modSet)
 
-def removeConflicts(baseTT,modSet):
-    flag = False
-
-    for mod in modSet:
-        for lesson in mod.getCompulsoryLessons():
-            for mod_del in modSet:
-                if mod_del != mod:
-                    for lesson_del in mod_del.getClashingLessons(lesson):
-                        mod_del.removeLesson(lesson_del)
-                        baseTT.removeLesson(lesson_del)
-                        flag = True
-
-    if flag:
-        return (removeConflicts(baseTT,modSet) + 1)
-    else:
-        return 1
-
 def generatePossibleModules(modCodeList,masterModset):
     moduleList = [module for module in masterModset if module.getCode() in modCodeList]
-    masterModset = removeExamConflicts(modCodeList,removeByFacultyFilter(modCodeList,masterModset))
+    masterModset = removeConflicts(modCodeList,masterModset)
 
     clock()
     flag = True
@@ -627,10 +609,10 @@ def generatePossibleModules(modCodeList,masterModset):
                         flag = True
                     for lessonToDelete in lessonList:
                         mod_del.removeLesson(lessonToDelete)
-        if any(masterModset.getModule(modCode).getNumChoices() == 0 for modCode in modCodeList):
-            print("Pre allocated Modules cannot be taken together!!")
-            return None
-
+        for modCode in modCodeList:
+            if masterModset.getModule(modCode).getNumChoices() == 0:
+                print(modCode)
+                print("Pre allocated Modules cannot be taken together!!")
     
 
     possibleMods = [];
@@ -640,37 +622,53 @@ def generatePossibleModules(modCodeList,masterModset):
 
     return possibleMods
 
-def removeExamConflicts(mainModList,masterModSet):
-    
-    examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModList]
+def removeConflicts(mainModCodeList,masterModSet):
+    examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModCodeList]
     tempModSet = ModuleSet()
+    
     for mod in masterModSet:
-        if(mod.getCode() not in mainModList and mod.getExamDate() != '' and mod.getExamDate() in examSlots):
-            tempModSet.addModule(mod)
+        if mod.getCode() not in mainModCodeList:
+            if hasNoExamConflict(mod,examSlots) and isOfRightFaculty(mod):
+                lessonList = []
+                for lesson in mod:
+                    if isAtWrongTime(lesson):
+                        lessonList.append(lesson)
+                for lesson in lessonList:
+                    mod.removeLesson(lesson)
+                if mod.getNumChoices() == 0:
+                    tempModSet.addModule(mod)
+            else:
+                tempModSet.addModule(mod)
 
     for mod in tempModSet:
         masterModSet.removeModule(mod.getCode())
-    
+
     return masterModSet
 
-def removeByFacultyFilter(mainModCodeList,masterModSet):
-    tempModSet = ModuleSet()
-    for mod in masterModSet:
-        if (mod.getCode() not in mainModCodeList) and deptToFac[mod.getDepartment()] in facRestriction:
-            tempModSet.addModule(mod)
-    for mod in tempModSet:
-        masterModSet.removeModule(mod.getCode())
-    return masterModSet
+def hasNoExamConflict(mod,examSlots):
+    return mod.getExamDate() == '' or mod.getExamDate() not in examSlots
 
-def removeByTimeFilter(lesson):
-    
-    return None
+def isOfRightFaculty(mod):
+    return deptToFac[mod.getDepartment()] in facChoices
 
+def isAtWrongTime(lesson):
+    if lesson.getModule() == 'MA1505':
+        print(lesson.getId(),any(lesson.hasSlot(timeslot) for timeslot in timeRestrictions))
+    return any(lesson.hasSlot(timeslot) for timeslot in timeRestrictions)
+
+dayToInt = {"MONDAY":1,"TUESDAY":2,"WEDNESDAY":3,"THURSDAY":4,"FRIDAY":5,"SATURDAY":6,"SUNDAY":7}
 loadedData,deptToFac = loadAllModData()
 ##modData = copy.deepcopy(loadedData)
-facRestriction = []##'SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
-modCodeList = ['MA1505','PC1432','PC1431','MA1506','CS1231','CS2103']
-timeRestrictions = [(2,800),(2,0900)]
+facChoices = ['SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
+modCodeList = ['PC1432','MA1506','CS1231','CS2103']
+timeRestrictionPairs = [(2,800),(2,900)]
+timeRestrictions = []
+for day,time in timeRestrictionPairs:
+    timeRestrictions.append(TimeSlot(day,time))
+
+for t in timeRestrictions:
+    print(t)
+    
 print("starting now...")
 modList = generatePossibleModules(modCodeList,loadedData)
 ##mod = checkModuleAdding("YLS1201")
