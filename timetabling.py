@@ -1,5 +1,17 @@
 import json,copy
 from time import clock
+
+##Constants or hardcoded variables
+dayToInt = {"MONDAY":1,"TUESDAY":2,"WEDNESDAY":3,"THURSDAY":4,"FRIDAY":5,"SATURDAY":6,"SUNDAY":7}
+facChoices = ['SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
+modCodeList = ['PC1432','MA1506','CS1231','CS2103']
+timeRestrictionPairs = [(2,800),(2,900)]
+timeRestrictions = []
+for day,time in timeRestrictionPairs:
+    timeRestrictions.append(TimeSlot(day,time))
+
+##Start of class hierarchy
+
 class TimeSlot(object):
     def __init__(self, day, time):
         self.day = day
@@ -412,104 +424,6 @@ class ModuleSet(object):
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
-    
-class Timetable(object):
-    def __init__(self,source=None):
-        ##create a timetable with day names as rows and the int representation of the 24 hr clock as columns
-        
-        Days = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"]
-        Times = []
-        stime = 600
-        while stime <= 2400:
-                Times.append(stime)
-                stime += 30 if stime%100 == 0 else 70
-        
-        self.field = {Day:{Time:[] for Time in Times} for Day in Days}
-        if source !=None:
-            if type(source) == ModuleSet:
-                self.addModuleSet(source)
-            elif type(source) == Module:
-                self.addModule(Module)
-            else:
-                raise TypeError("Given source parameter is not of type Module or ModuleSet")
-
-    def __iter__(self):
-        for day in self.field.values():
-            yield day;
-    
-    def getSlot(self, day, time):    
-        return self.field[day][time]
-
-    def __getitem__(self, timeslot):
-        if type(timeslot) != TimeSlot:
-            raise TypeError("Given parameter is not of type TimeSlot")
-
-        return self.getSlot(timeslot.getDay(), timeslot.getTime())
-
-    ## combine these functions using polymorphism
-    def addModuleSet(self, moduleset):
-        if not type(moduleset) == ModuleSet:
-            raise TypeError("The given parameter is not of type ModuleSet")
-
-        for module in moduleset:
-            self.addModule(module)
-
-    def addModule(self, module):
-        if not type(module) == Module:
-            raise TypeError("The given parameter is not of type Module")
-
-        for lesson in module:
-            self.addLesson(lesson)
-
-    def addLesson(self, lesson):
-        if not issubclass(type(lesson), Lesson):
-            raise TypeError("Given parameter is not of type Lesson")
-        for period in lesson:
-            self.addLessonP(period, lesson)
-
-    def addLessonP(self, period, lesson):
-        if not type(period) == Period:
-            raise TypeError("Given parameter is not of type Period")
-        for timeslot in period:
-            self.addLessonT(timeslot, lesson)
-
-    def addLessonT(self, timeslot, lesson):
-        if not type(timeslot) == TimeSlot:
-            raise TypeError("Given parameter is not of type TimeSlot")
-
-        self[timeslot].append(lesson)
-
-    def removeLesson(self,lesson):
-        for period in lesson:
-            self.removeLessonP(period,lesson)
-
-    def removeLessonP(self, period, lesson):
-        for timeslot in period:
-            self.removeLessonT(timeslot, lesson)
-
-    def removeLessonT(self, timeslot, lesson):
-        Slot = self[timeslot]
-
-        for self_lesson in Slot:
-            if self_lesson == lesson:
-                Slot.remove(lesson);
-
-    def getLessonsCount(self, timeslot):
-        return len(self[timeslot])
-
-    def print(self):
-        for day in self.field:
-            print (day)
-            for time in self.field[day]:
-                if len(self.field[day][time]) > 0:
-                    print(time,len(self.field[day][time]))
-                    ##for lesson in self.field[day][time]:
-                      ##  print(lesson.getId())
-
-##-----------------------------------------------------------------------------------------------------------------------
-##-----------------------------------------------------------------------------------------------------------------------
-##-----------------------------------------------------------------------------------------------------------------------
-##-----------------------------------------------------------------------------------------------------------------------
 
 def checkModuleAdding(testCode):
     filemods = open('modsData.txt')
@@ -575,19 +489,6 @@ def loadAllModData():
             noTimetableModCount += 1
         modSet.addModule(newmod)
     return (modSet,deptToFac)
-    
-
-def generateBaseTimetable(modList,masterModset):
-    
-    modSet = ModuleSet()
-    for modcode in modList:
-        newmod = masterModset.getModule(modcode)
-        modSet.addModule(newmod)
-
-    baseTT = Timetable(modSet)
-    removeConflicts(baseTT,modSet)
-    
-    return (baseTT,modSet)
 
 def generatePossibleModules(modCodeList,masterModset):
     moduleList = [module for module in masterModset if module.getCode() in modCodeList]
@@ -656,18 +557,8 @@ def isAtWrongTime(lesson):
         print(lesson.getId(),any(lesson.hasSlot(timeslot) for timeslot in timeRestrictions))
     return any(lesson.hasSlot(timeslot) for timeslot in timeRestrictions)
 
-dayToInt = {"MONDAY":1,"TUESDAY":2,"WEDNESDAY":3,"THURSDAY":4,"FRIDAY":5,"SATURDAY":6,"SUNDAY":7}
 loadedData,deptToFac = loadAllModData()
 ##modData = copy.deepcopy(loadedData)
-facChoices = ['SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
-modCodeList = ['PC1432','MA1506','CS1231','CS2103']
-timeRestrictionPairs = [(2,800),(2,900)]
-timeRestrictions = []
-for day,time in timeRestrictionPairs:
-    timeRestrictions.append(TimeSlot(day,time))
-
-for t in timeRestrictions:
-    print(t)
     
 print("starting now...")
 modList = generatePossibleModules(modCodeList,loadedData)
