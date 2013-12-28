@@ -613,11 +613,20 @@ def generatePossibleModules(modCodeList,masterModset):
         for mod in moduleList:
             for lesson in mod.getCompulsoryLessons():
                 for mod_del in masterModset:
-                        for lesson_del in mod_del.getClashingLessons(lesson):
-                            mod_del.removeLesson(lesson_del)
-                            flag = True
+                    lessonIdSet = set()
+                    lessonList = []
+                    for lesson_del in mod_del.getClashingLessons(lesson):
+                        if lessonIdSet.add(lesson_del.getId()):
+                            lessonList.append(lesson_del)
+                        flag = True
+                    for lessonToDelete in lessonList:                        
+                        mod_del.removeLesson(lessonToDelete)
 
     print("done removing")
+    
+    if any(masterModset.getModule(modCode).getNumChoices() == 0 for modCode in modCodeList):
+        print("Pre allocated Modules cannot be taken together!!")
+        exit
     modCounter = 0
     possibleMods = [];
     for mod in masterModset:
@@ -653,8 +662,8 @@ def removeByTimeFilter():
 
 loadedData,deptToFac = loadAllModData()
 ##modData = copy.deepcopy(loadedData)
-facRestriction = ['SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
-modCodeList = ['ST2334','EE2023','EE2024','EE2031']
+facRestriction = []##'SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
+modCodeList = ['MA1505','PC1432','PC1431','MA1506','CS1231','CS2103']
 print("starting now...")
 modList = generatePossibleModules(modCodeList,loadedData)
 ##mod = checkModuleAdding("YLS1201")
