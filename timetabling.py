@@ -1,4 +1,4 @@
-import json
+import json,copy
 from time import clock
 class TimeSlot(object):
     def __init__(self, day, time):
@@ -221,12 +221,13 @@ class Laboratory(Lesson):
 ##-----------------------------------------------------------------------------------------------------------------------
     
 class Module(object):
-    def __init__(self, code):
+    def __init__(self, code,examDate):
         if not isinstance(code,str):
             raise TypeError("Given code is not of type string!")
 
         self.lessons = {"Lecture":[],"Tutorial":[],"Laboratory":[]}
         self.code = code
+        self.examDate = examDate
 
     def addLesson(self, lesson):
         if not issubclass(type(lesson), Lesson):
@@ -234,14 +235,11 @@ class Module(object):
 
         if self.code != lesson.getModule():
             raise TypeError("Given Lesson does not belong to this Module")
-        
+
+        ## check if this is a second period to an existing lesson
         if self.hasLesson(lesson=lesson):
             internalLesson = self.getLesson(lesson.getId())
-            internalLesson.addPeriod(lesson)
-            ## what if we had a partially completed lesson which has an alternative?
-            if self.hasAlternativeLesson(lesson):
-                self.removeLesson(lesson)
-            
+            internalLesson.addPeriod(lesson)           
         else:
             if not self.hasAlternativeLesson(lesson):
                 self.lessons[lesson.getId().split("_")[1]].append(lesson)
@@ -310,9 +308,16 @@ class Module(object):
     
     def getCode(self):
         return self.code
-                
-    ## this function is used to set the count of lessons in the actual module as to optimise we would be removing some of the lessons prematurely
+
+    def getExamDate(self):
+        return self.examDate
+    
+    ## this function is used to set the count of lessons in the actual module as, to optimise we would be removing some of the lessons prematurely
     def setBaseparams(self):
+        for lesson in self:
+            if self.hasAlternativeLesson(lesson):
+                self.removeLesson(lesson)
+        
         self.leccount = len(self.lessons["Lecture"])
         self.tutcount = len(self.lessons["Tutorial"])
         self.labcount = len(self.lessons["Laboratory"])
@@ -367,6 +372,7 @@ class ModuleSet(object):
     ##        if ModuleSet.Created:
     ##           raise RuntimeError("A moduleset has already been created")
         self.modules = []
+        self.count = 0
 
     def addModule(self, module):
         if not type(module) == Module:
@@ -374,11 +380,16 @@ class ModuleSet(object):
         
         module.setBaseparams()
         self.modules.append(module)
+        self.count += 1
 
     def removeModule(self, code):
-        for module in self:
-            if module.getCode() == code:
-                self.modules.remove(module)
+        module = self.getModule(code)
+        if module:
+            self.modules.remove(module)
+            self.count -= 1
+
+    def getModuleCount(self):
+        return self.count
     
     def getModule(self,code):
         for module in self:
@@ -400,7 +411,7 @@ class Timetable(object):
         
         Days = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"]
         Times = []
-        stime = 800
+        stime = 600
         while stime <= 2400:
                 Times.append(stime)
                 stime += 30 if stime%100 == 0 else 70
@@ -492,6 +503,38 @@ class Timetable(object):
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
 
+def checkModuleAdding(testCode):
+    filemods = open('modsData.txt')
+    fileLtypes = open('LtypesData.txt')
+
+    modsJson = json.load(filemods)
+    LtypesJson = json.load(fileLtypes)
+
+    filemods.close()
+    fileLtypes.close()
+
+    modSet = ModuleSet()
+    
+    for modData in modsJson:
+        modcode = modData['ModuleCode']
+        if(modcode != testCode):
+            continue
+        examDate = modData.get('ExamDate','')
+        newmod = Module(modcode,examDate)
+        try:
+            for lesson in modData['Timetable']:
+                if lesson['LessonType'] == 'LABORATORY':
+                    newlesson = Laboratory(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText']))
+                else:
+                    print(lesson['LessonType'])
+                    newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText']))
+                newmod.addLesson(newlesson)
+        except KeyError:
+            noTimetableModCount += 1
+
+    return newmod
+        
+
 def loadAllModData():
     filemods = open('modsData.txt')
     fileLtypes = open('LtypesData.txt')
@@ -503,24 +546,29 @@ def loadAllModData():
     fileLtypes.close()
 
     modSet = ModuleSet()
-    for modcode in modsJson.keys():
-        newmod = Module(modcode)
-        for lesson in modsJson[modcode]['Timetable']:
-            if lesson['LessonType'] == 'LABORATORY':
-                newlesson = Laboratory(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText']))
-            else:
-                newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText']))
-            newmod.addLesson(newlesson)
+    noTimetableModCount = 0
+    for modData in modsJson:
+        modcode = modData['ModuleCode']
+        examDate = modData.get('ExamDate','')
+        newmod = Module(modcode,examDate)
+        try:
+            for lesson in modData['Timetable']:
+                if lesson['LessonType'] == 'LABORATORY':
+                    newlesson = Laboratory(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText']))
+                else:
+                    newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=lesson['DayText']))
+                newmod.addLesson(newlesson)
+        except KeyError:
+            noTimetableModCount += 1
         modSet.addModule(newmod)
-
-    return modSet
+    return (modSet)
     
 
-def generateBaseTimetable(modList,masterModSet):
+def generateBaseTimetable(modList,masterModset):
     
     modSet = ModuleSet()
     for modcode in modList:
-        newmod = masterModSet.getModule(modcode)        
+        newmod = masterModset.getModule(modcode)
         modSet.addModule(newmod)
 
     baseTT = Timetable(modSet)
@@ -545,15 +593,47 @@ def removeConflicts(baseTT,modSet):
     else:
         return 1
 
-def generatePossibleModules(modList,masterModSet):
+def generatePossibleModulesNew(modCodeList,masterModset):
+    moduleList = [module for module in masterModset if module.getCode() in modCodeList]
+    masterModset = removeExamConflicts(modCodeList,masterModset)
+    flag = True
+    while(flag):
+        flag = False
+        for mod in moduleList:
+            for lesson in mod.getCompulsoryLessons():
+                for mod_del in masterModset:
+                        for lesson_del in mod_del.getClashingLessons(lesson):
+                            mod_del.removeLesson(lesson_del)
+                            flag = True
+
+    print("done removing")
+    modCounter = 0
+    possibleMods = [];
+    for mod in masterModset:
+        if (mod not in moduleList) and mod.getNumChoices() != 0:
+            possibleMods.append(mod.getCode())
+
+    return possibleMods
+
+def generatePossibleModules(modList,masterModset):
 
     possibleMods = []
+    masterModset = removeExamConflicts(modList,masterModset)
+    baseTimetable,modSet = generateBaseTimetable(modList,masterModset);
 
-    for currentMod in masterModSet:
+    for currentMod in masterModset:
         if modList.count(currentMod.getCode()) > 0:
             continue
         modList.append(currentMod.getCode())
-        baseTT,modSet = generateBaseTimetable(modList,masterModset);
+        try:
+            baseTT = copy.deepcopy(baseTimetable)            
+            baseTT.addModule(currentMod)
+            modSet.addModule(currentMod)
+        except KeyError:
+            print(modList)
+            modList.remove(currentMod.getCode())
+            modSet.removeModule(currentMod.getCode())
+            continue
 
         conflictlist = {};
 ##        confmodcount = {};
@@ -566,7 +646,7 @@ def generatePossibleModules(modList,masterModSet):
                     for lesson in time:
                         conflictlist[lesson.getId()] = conflictlist.get(lesson.getId(),set()) | set([lesson_temp.getId() for lesson_temp in time if lesson_temp != lesson]);
 ##                        confmodcount[lesson.getModule()] = confmodcount.get(lesson.getModule(),0) + 1
-        print(clock())
+##        print(clock())
 
 
 ##        calcmodSet = []
@@ -580,13 +660,13 @@ def generatePossibleModules(modList,masterModSet):
 ##
 ##        sortedmodSet = [mod for count,mod in sortedmodSet]
 
-        sortedmodSet= modSet
+        sortedmodSet= [mod for mod in modSet]
         if(HasPossibleTimetable(conflictlist,sortedmodSet,len(modList))):
             possibleMods.append(currentMod.getCode())
-
+        ##else:
+            ##print(currentMod.getCode())
         modList.remove(currentMod.getCode())
-        
-    print (possibleMods)
+        modSet.removeModule(currentMod.getCode())
     return possibleMods
 
 ## a recursive function that loops through all the available modules/lessons
@@ -614,3 +694,31 @@ def countAlternatives(modSet):
             count+=lesson.getAlternativeCount()
 
     print(count)
+
+def removeExamConflicts(mainModList,masterModSet):
+
+    examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModList]
+    
+    for mod in masterModSet:
+        if(mod.getCode() not in mainModList and mod.getExamDate() != '' and mod.getExamDate() in examSlots):
+            masterModSet.removeModule(mod.getCode())
+
+    return masterModSet
+
+def doComparison(modCodeList):
+    modList2 = Algo2(modCodeList,copy.deepcopy(loadedData))
+    modList1 = generatePossibleModules(modCodeList,copy.deepcopy(loadedData))
+
+loadedData = loadAllModData()
+modCodeList = ["ST2334","EE2023","EE2024","EE2031"]
+modList2 = Algo2(modCodeList,copy.deepcopy(loadedData))
+modList1 = generatePossibleModules(modCodeList,copy.deepcopy(loadedData))
+print("len of 1: ",len(modList1))
+print("len of 2: ",len(modList2))
+newSet = set(modList1 + modList2)
+print("length of set: ",len(newSet))
+set1 = set(modList1)
+difSet= newSet - set1
+print("length of difset: ",len(difSet))
+##mod = checkModuleAdding("YLS1201")
+##mod.setBaseparams()

@@ -3,7 +3,7 @@
 	"LABORATORY": "Tutorial",
 	"LECTURE": "Lecture",
 	"PACKAGED LECTURE": "Lecture",
-	"PACKAGED TUTORIAL": "Lecture",
+	"PACKAGED TUTORIAL": "Tutorial",
 	"RECITATION": "Tutorial",
 	"SECTIONAL TEACHING": "Lecture",
 	"SEMINAR-STYLE MODULE CLASS": "Lecture",
