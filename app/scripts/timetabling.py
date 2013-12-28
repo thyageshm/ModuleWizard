@@ -119,10 +119,10 @@ class Lesson(object):
     def __init__(self,group,module,*periods):
         if not all(type(period) == Period for period in periods):
             raise TypeError("One or more of the parameters given is not of type Period")
-        
+
         self.periods = list(periods)
-        self.group = group
-        self.module = module
+        self.group = str(group)
+        self.module = str(module)
         self.alternatives = []
 
     def addPeriod(self, *sources):
@@ -258,7 +258,9 @@ class Module(object):
         self.lessons[type(lesson).__name__].remove(lesson)
 
     def removeAllBut(self,lessonType,group):
-        self.lessons[lessontType] = [lesson for lesson in self.lessons[lessontType] if lesson.getGroup() == group]
+        ##print(group)
+        ##print([lesson.getGroup() for lesson in self.lessons[lessonType]])
+        self.lessons[lessonType] = [lesson for lesson in self.lessons[lessonType] if group in [lesson.getGroup()]+[tempLesson.getGroup() for tempLesson in lesson.getAlternatives()]]
             
     def hasAlternativeLesson(self,lesson):
         for self_lesson in self.__iter__(type(lesson)):
@@ -421,7 +423,7 @@ class ModuleSet(object):
 ##Constants or hardcoded variables
 dayToInt = {"MONDAY":1,"TUESDAY":2,"WEDNESDAY":3,"THURSDAY":4,"FRIDAY":5,"SATURDAY":6,"SUNDAY":7}
 facChoices = ['SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
-modCodeList = {'PC1432':{},'MA1506':{},'CS1231':{},'CS2103':{}}
+modCodeList = {'PC1432':{"Lecture":"1","Laboratory":"D03"},'MA1506':{"Lecture":"D","Tutorial":"A16"},'CS1231':{"Tutorial":"6","Lecture":"1"},'CS2103':{},"MUA3162":{},"MUA4219":{}}
 timeRestrictionPairs = [(2,800),(2,900)]
 timeRestrictions = []
 for day,time in timeRestrictionPairs:
@@ -514,7 +516,7 @@ def generatePossibleModules(modInfoDict,masterModset):
                         mod_del.removeLesson(lessonToDelete)
         for tempMod in modList:
             if tempMod.getNumChoices() == 0:
-                print(modCode)
+                print(tempMod.getCode())
                 print("Pre allocated Modules cannot be taken together!!")
     
 
@@ -523,13 +525,13 @@ def generatePossibleModules(modInfoDict,masterModset):
         if (mod not in modList) and mod.getNumChoices() != 0:
             possibleMods.append(mod.getCode())
 
-    return possibleMods
+    return possibleMods,modList
 
 def getPreallocatedModuleList(masterModset,modInfoDict):
     modList = []
     for mod in masterModset:
         if mod.getCode() in modInfoDict.keys():
-            for lessonType,group in modInfoDict[mod.getCode()]:
+            for lessonType,group in modInfoDict[mod.getCode()].items():
                 mod.removeAllBut(lessonType,group)
             modList.append(mod)
 
@@ -571,6 +573,10 @@ loadedData,deptToFac = loadAllModData()
 ##modData = copy.deepcopy(loadedData)
     
 print("starting now...")
-modList = generatePossibleModules(modCodeList,loadedData)
+modList,testMods = generatePossibleModules(modCodeList,loadedData)
+
+for mod in testMods:
+    for l in mod.getCompulsoryLessons():
+        print(l)
 ##mod = checkModuleAdding("YLS1201")
 ##mod.setBaseparams()
