@@ -1,15 +1,5 @@
 import json,copy
 from time import clock
-
-##Constants or hardcoded variables
-dayToInt = {"MONDAY":1,"TUESDAY":2,"WEDNESDAY":3,"THURSDAY":4,"FRIDAY":5,"SATURDAY":6,"SUNDAY":7}
-facChoices = ['SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
-modCodeList = ['PC1432','MA1506','CS1231','CS2103']
-timeRestrictionPairs = [(2,800),(2,900)]
-timeRestrictions = []
-for day,time in timeRestrictionPairs:
-    timeRestrictions.append(TimeSlot(day,time))
-
 ##Start of class hierarchy
 
 class TimeSlot(object):
@@ -425,6 +415,15 @@ class ModuleSet(object):
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
 
+##Constants or hardcoded variables
+dayToInt = {"MONDAY":1,"TUESDAY":2,"WEDNESDAY":3,"THURSDAY":4,"FRIDAY":5,"SATURDAY":6,"SUNDAY":7}
+facChoices = ['SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
+modCodeList = ['PC1432','MA1506','CS1231','CS2103']
+timeRestrictionPairs = [(2,800),(2,900)]
+timeRestrictions = []
+for day,time in timeRestrictionPairs:
+    timeRestrictions.append(TimeSlot(day,time))
+
 def checkModuleAdding(testCode):
     filemods = open('modsData.txt')
     fileLtypes = open('LtypesData.txt')
@@ -553,8 +552,6 @@ def isOfRightFaculty(mod):
     return deptToFac[mod.getDepartment()] in facChoices
 
 def isAtWrongTime(lesson):
-    if lesson.getModule() == 'MA1505':
-        print(lesson.getId(),any(lesson.hasSlot(timeslot) for timeslot in timeRestrictions))
     return any(lesson.hasSlot(timeslot) for timeslot in timeRestrictions)
 
 loadedData,deptToFac = loadAllModData()
