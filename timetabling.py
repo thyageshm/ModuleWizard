@@ -221,13 +221,14 @@ class Laboratory(Lesson):
 ##-----------------------------------------------------------------------------------------------------------------------
     
 class Module(object):
-    def __init__(self, code,examDate):
+    def __init__(self, code,examDate,dept):
         if not isinstance(code,str):
             raise TypeError("Given code is not of type string!")
 
         self.lessons = {"Lecture":[],"Tutorial":[],"Laboratory":[]}
         self.code = code
         self.examDate = examDate
+        self.dept = dept
 
     def addLesson(self, lesson):
         if not issubclass(type(lesson), Lesson):
@@ -303,6 +304,8 @@ class Module(object):
             if lesson.getId() == Lid:
                 return lesson
 
+    def getDepartment(self):
+        return self.dept
     def getNumChoices(self):
         return (1 if 0 == self.leccount else len(self.lessons["Lecture"])) * (1 if 0 == self.tutcount else len(self.lessons["Tutorial"])) * (1 if 0 == self.labcount else len(self.lessons["Laboratory"]))
     
@@ -384,6 +387,8 @@ class ModuleSet(object):
 
     def removeModule(self, code):
         module = self.getModule(code)
+        if(code == "BN4101R"):
+            print(module)
         if module:
             self.modules.remove(module)
             self.count -= 1
@@ -536,21 +541,26 @@ def checkModuleAdding(testCode):
         
 
 def loadAllModData():
-    filemods = open('modsData.txt')
+    fileMods = open('modsData.txt')
     fileLtypes = open('LtypesData.txt')
+    fileDeptToFac = open('DepartmentToFaculty.txt')
 
-    modsJson = json.load(filemods)
+    modsJson = json.load(fileMods)
     LtypesJson = json.load(fileLtypes)
+    deptToFac = json.load(fileDeptToFac)
 
-    filemods.close()
+    fileMods.close()
     fileLtypes.close()
+    fileDeptToFac.close()
 
     modSet = ModuleSet()
     noTimetableModCount = 0
+    
     for modData in modsJson:
         modcode = modData['ModuleCode']
         examDate = modData.get('ExamDate','')
-        newmod = Module(modcode,examDate)
+        modDept = modData.get('Department','')
+        newmod = Module(modcode,examDate,modDept)
         try:
             for lesson in modData['Timetable']:
                 if lesson['LessonType'] == 'LABORATORY':
@@ -561,7 +571,7 @@ def loadAllModData():
         except KeyError:
             noTimetableModCount += 1
         modSet.addModule(newmod)
-    return (modSet)
+    return (modSet,deptToFac)
     
 
 def generateBaseTimetable(modList,masterModset):
@@ -593,9 +603,10 @@ def removeConflicts(baseTT,modSet):
     else:
         return 1
 
-def generatePossibleModulesNew(modCodeList,masterModset):
+def generatePossibleModules(modCodeList,masterModset):
     moduleList = [module for module in masterModset if module.getCode() in modCodeList]
-    masterModset = removeExamConflicts(modCodeList,masterModset)
+    masterModset = removeExamConflicts(modCodeList,removeByFacultyFilter(modCodeList,masterModset))
+    
     flag = True
     while(flag):
         flag = False
@@ -615,110 +626,36 @@ def generatePossibleModulesNew(modCodeList,masterModset):
 
     return possibleMods
 
-def generatePossibleModules(modList,masterModset):
-
-    possibleMods = []
-    masterModset = removeExamConflicts(modList,masterModset)
-    baseTimetable,modSet = generateBaseTimetable(modList,masterModset);
-
-    for currentMod in masterModset:
-        if modList.count(currentMod.getCode()) > 0:
-            continue
-        modList.append(currentMod.getCode())
-        try:
-            baseTT = copy.deepcopy(baseTimetable)            
-            baseTT.addModule(currentMod)
-            modSet.addModule(currentMod)
-        except KeyError:
-            print(modList)
-            modList.remove(currentMod.getCode())
-            modSet.removeModule(currentMod.getCode())
-            continue
-
-        conflictlist = {};
-##        confmodcount = {};
-          
-        ## go through the whole timetable and for each timeslot, create a dict of "conflicts" sets
-        clock()
-        for day in baseTT:
-            for time in day.values():
-                if len(time) > 1:
-                    for lesson in time:
-                        conflictlist[lesson.getId()] = conflictlist.get(lesson.getId(),set()) | set([lesson_temp.getId() for lesson_temp in time if lesson_temp != lesson]);
-##                        confmodcount[lesson.getModule()] = confmodcount.get(lesson.getModule(),0) + 1
-##        print(clock())
-
-
-##        calcmodSet = []
-##        for mod in modSet:
-##            calcmodSet.append((mod.getNumChoices()/confmodcount.get(mod.getCode(),1),mod))
-##        
-##        ## arrange them in ascending order by choices available
-##        sortedmodSet = sorted(calcmodSet,reverse=True);
-##        for count,mod in sortedmodSet:
-##            print(mod.getCode(),count);
-##
-##        sortedmodSet = [mod for count,mod in sortedmodSet]
-
-        sortedmodSet= [mod for mod in modSet]
-        if(HasPossibleTimetable(conflictlist,sortedmodSet,len(modList))):
-            possibleMods.append(currentMod.getCode())
-        ##else:
-            ##print(currentMod.getCode())
-        modList.remove(currentMod.getCode())
-        modSet.removeModule(currentMod.getCode())
-    return possibleMods
-
-## a recursive function that loops through all the available modules/lessons
-def HasPossibleTimetable(conflist,sortedmodSet,modcount,setclash = set(),setcur = set()):
-    count = False
-    curconflict = conflist
-    
-    if modcount == 1:
-        for choice in sortedmodSet[modcount-1].getChoices(setclash):
-            ##print(setcur | choice);
-            return True
-    else:
-        for choice in sortedmodSet[modcount-1].getChoices(setclash):
-            count+= HasPossibleTimetable(conflist,sortedmodSet,modcount-1,(setclash|set.union(*[curconflict.get(i,set()) for i in choice])),setcur | choice)
-            if(count == True):
-                return True
-            
-    return False
-
-def countAlternatives(modSet):
-    count = 0;
-
-    for mod in modSet:
-        for lesson in mod:
-            count+=lesson.getAlternativeCount()
-
-    print(count)
-
 def removeExamConflicts(mainModList,masterModSet):
-
-    examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModList]
     
+    examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModList]
+    tempModSet = ModuleSet()
     for mod in masterModSet:
         if(mod.getCode() not in mainModList and mod.getExamDate() != '' and mod.getExamDate() in examSlots):
-            masterModSet.removeModule(mod.getCode())
+            tempModSet.addModule(mod)
 
+    for mod in tempModSet:
+        masterModSet.removeModule(mod.getCode())
+    
     return masterModSet
 
-def doComparison(modCodeList):
-    modList2 = Algo2(modCodeList,copy.deepcopy(loadedData))
-    modList1 = generatePossibleModules(modCodeList,copy.deepcopy(loadedData))
+def removeByFacultyFilter(mainModCodeList,masterModSet):
+    tempModSet = ModuleSet()
+    for mod in masterModSet:
+        if (mod.getCode() not in mainModCodeList) and deptToFac[mod.getDepartment()] in facRestriction:
+            tempModSet.addModule(mod)
+    for mod in tempModSet:
+        masterModSet.removeModule(mod.getCode())
+    return masterModSet
 
-loadedData = loadAllModData()
-modCodeList = ["ST2334","EE2023","EE2024","EE2031"]
-modList2 = Algo2(modCodeList,copy.deepcopy(loadedData))
-modList1 = generatePossibleModules(modCodeList,copy.deepcopy(loadedData))
-print("len of 1: ",len(modList1))
-print("len of 2: ",len(modList2))
-newSet = set(modList1 + modList2)
-print("length of set: ",len(newSet))
-set1 = set(modList1)
-difSet= newSet - set1
-print("length of difset: ",len(difSet))
+def removeByTimeFilter():
+    return None
+
+loadedData,deptToFac = loadAllModData()
+##modData = copy.deepcopy(loadedData)
+facRestriction = ['SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
+modCodeList = ['ST2334','EE2023','EE2024','EE2031']
+print("starting now...")
+modList = generatePossibleModules(modCodeList,loadedData)
 ##mod = checkModuleAdding("YLS1201")
 ##mod.setBaseparams()
