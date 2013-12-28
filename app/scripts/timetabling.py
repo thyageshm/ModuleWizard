@@ -255,8 +255,11 @@ class Module(object):
         if self.code != lesson.getModule():
             raise TypeError("Given Lesson does not belong to this Module")
 
-        self.lessons[type(lesson).__name__].remove(lesson);
+        self.lessons[type(lesson).__name__].remove(lesson)
 
+    def removeAllBut(self,lessonType,group):
+        self.lessons[lessontType] = [lesson for lesson in self.lessons[lessontType] if lesson.getGroup() == group]
+            
     def hasAlternativeLesson(self,lesson):
         for self_lesson in self.__iter__(type(lesson)):
             if self_lesson != lesson and self_lesson.isAlternative(lesson):
@@ -418,15 +421,15 @@ class ModuleSet(object):
 ##Constants or hardcoded variables
 dayToInt = {"MONDAY":1,"TUESDAY":2,"WEDNESDAY":3,"THURSDAY":4,"FRIDAY":5,"SATURDAY":6,"SUNDAY":7}
 facChoices = ['SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
-modCodeList = ['PC1432','MA1506','CS1231','CS2103']
+modCodeList = {'PC1432':{},'MA1506':{},'CS1231':{},'CS2103':{}}
 timeRestrictionPairs = [(2,800),(2,900)]
 timeRestrictions = []
 for day,time in timeRestrictionPairs:
     timeRestrictions.append(TimeSlot(day,time))
 
 def checkModuleAdding(testCode):
-    filemods = open('../../app/scripts/modsData.txt')
-    fileLtypes = open('../../app/scripts/LtypesData.txt')
+    filemods = open('modsData.txt')
+    fileLtypes = open('LtypesData.txt')
 
     modsJson = json.load(filemods)
     LtypesJson = json.load(fileLtypes)
@@ -457,9 +460,9 @@ def checkModuleAdding(testCode):
         
 
 def loadAllModData():
-    fileMods = open('../../app/scripts/modsData.txt')
-    fileLtypes = open('../../app/scripts/LtypesData.txt')
-    fileDeptToFac = open('../../app/scripts/DepartmentToFaculty.txt')
+    fileMods = open('modsData.txt')
+    fileLtypes = open('LtypesData.txt')
+    fileDeptToFac = open('DepartmentToFaculty.txt')
 
     modsJson = json.load(fileMods)
     LtypesJson = json.load(fileLtypes)
@@ -489,19 +492,19 @@ def loadAllModData():
         modSet.addModule(newmod)
     return (modSet,deptToFac)
 
-def generatePossibleModules(modCodeList,masterModset):
-    moduleList = [module for module in masterModset if module.getCode() in modCodeList]
-    masterModset = removeConflicts(modCodeList,masterModset)
+def generatePossibleModules(modInfoDict,masterModset):
+    modList,masterModset = getPreallocatedModuleList(masterModset,modInfoDict)
+    masterModset = removeConflicts(modInfoDict.keys(),masterModset)
 
     clock()
     flag = True
     
     while(flag):
         flag = False
-        for mod in moduleList:
+        for mod in modList:
             for lesson in mod.getCompulsoryLessons():
                 for mod_del in masterModset:
-                    if mod == mod_del:
+                    if mod is mod_del:
                         continue
                     lessonList = []
                     for lesson_del in mod_del.getClashingLessons(lesson):
@@ -509,18 +512,28 @@ def generatePossibleModules(modCodeList,masterModset):
                         flag = True
                     for lessonToDelete in lessonList:
                         mod_del.removeLesson(lessonToDelete)
-        for modCode in modCodeList:
-            if masterModset.getModule(modCode).getNumChoices() == 0:
+        for tempMod in modList:
+            if tempMod.getNumChoices() == 0:
                 print(modCode)
                 print("Pre allocated Modules cannot be taken together!!")
     
 
     possibleMods = [];
     for mod in masterModset:
-        if (mod not in moduleList) and mod.getNumChoices() != 0:
+        if (mod not in modList) and mod.getNumChoices() != 0:
             possibleMods.append(mod.getCode())
 
     return possibleMods
+
+def getPreallocatedModuleList(masterModset,modInfoDict):
+    modList = []
+    for mod in masterModset:
+        if mod.getCode() in modInfoDict.keys():
+            for lessonType,group in modInfoDict[mod.getCode()]:
+                mod.removeAllBut(lessonType,group)
+            modList.append(mod)
+
+    return (modList,masterModset)
 
 def removeConflicts(mainModCodeList,masterModSet):
     examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModCodeList]
