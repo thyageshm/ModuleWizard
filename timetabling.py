@@ -293,10 +293,14 @@ class Module(object):
                 yield lesson
 
     def getClashingLessons(self,lesson):
+        conflictSet = set()
         for period in lesson:
             for timeslot in period:
                 for lesson in self.getOccupyingLesson(timeslot):
-                    yield lesson
+                    conflictSet.add(lesson.getId())
+        for lesson in self:
+            if(lesson.getId() in conflictSet):
+                yield lesson
     
     def getLesson(self, Lid):
         ## only check in the list of lessons that are of the same type (Lec/Tut/Lab)
@@ -606,28 +610,34 @@ def removeConflicts(baseTT,modSet):
 def generatePossibleModules(modCodeList,masterModset):
     moduleList = [module for module in masterModset if module.getCode() in modCodeList]
     masterModset = removeExamConflicts(modCodeList,removeByFacultyFilter(modCodeList,masterModset))
-    
+
+    clock()
     flag = True
+    
     while(flag):
         flag = False
         for mod in moduleList:
             for lesson in mod.getCompulsoryLessons():
+                print(lesson)
                 for mod_del in masterModset:
-                    lessonIdSet = set()
+                    if mod == mod_del:
+                        continue
                     lessonList = []
                     for lesson_del in mod_del.getClashingLessons(lesson):
-                        if lessonIdSet.add(lesson_del.getId()):
-                            lessonList.append(lesson_del)
+                        lessonList.append(lesson_del)
                         flag = True
-                    for lessonToDelete in lessonList:                        
+                    for lessonToDelete in lessonList:
                         mod_del.removeLesson(lessonToDelete)
 
-    print("done removing")
+    for mod in moduleList:
+        for lesson in mod.getCompulsoryLessons():
+            print(lesson)
     
-    if any(masterModset.getModule(modCode).getNumChoices() == 0 for modCode in modCodeList):
-        print("Pre allocated Modules cannot be taken together!!")
-        exit
-    modCounter = 0
+    for modCode in modCodeList:
+        if masterModset.getModule(modCode).getNumChoices() == 0:
+            print(modCode)
+            print("Pre allocated Modules cannot be taken together!!")
+
     possibleMods = [];
     for mod in masterModset:
         if (mod not in moduleList) and mod.getNumChoices() != 0:
@@ -663,7 +673,7 @@ def removeByTimeFilter():
 loadedData,deptToFac = loadAllModData()
 ##modData = copy.deepcopy(loadedData)
 facRestriction = []##'SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
-modCodeList = ['MA1505','PC1432','PC1431','MA1506','CS1231','CS2103']
+modCodeList = ['MA1505','PC1432','MA1506','CS1231','CS2103']
 print("starting now...")
 modList = generatePossibleModules(modCodeList,loadedData)
 ##mod = checkModuleAdding("YLS1201")
