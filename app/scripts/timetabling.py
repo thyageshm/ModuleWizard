@@ -560,6 +560,22 @@ def removeConflicts(mainModCodeList,masterModSet):
 
     return masterModSet
 
+def filterByPrereq(modCodeList,masterModSet):
+    modsToRemove = []
+    for mod in masterModSet:
+        modCode = mod.getCode()
+        if not isEligibleByPrereq(modCode,modCodeList):
+            modsToRemove.append(modCode)
+
+    for modCode in modsToRemove:
+        masterModSet.removeModule(modCode)
+
+    return masterModSet
+
+def isEligibleByPrereq(modCodeToTake,modCodesAlreadyTaken):
+    preReqDict = preReqData[modCodeToTake]
+    return satisfiesPre(preReqDict,modCodesAlreadyTaken)
+
 def hasNoExamConflict(mod,examSlots):
     return mod.getExamDate() == '' or mod.getExamDate() not in examSlots
 
@@ -568,6 +584,14 @@ def isOfRightFaculty(mod):
 
 def isAtWrongTime(lesson):
     return any(lesson.hasSlot(timeslot) for timeslot in timeRestrictions)
+
+def satisfiesPrereq(child, modList):
+    if child['name'] == "and":
+       return all(satisfiesPrereq(c1) for c1 in child['children'])
+    elif child['name'] == "or":
+       return any(satisfiesPrereq(c1) for c1 in child['children'])
+    else:
+        return child['name'] in modList
 
 loadedData,deptToFac = loadAllModData()
 ##modData = copy.deepcopy(loadedData)
