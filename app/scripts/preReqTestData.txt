@@ -1,0 +1,75 @@
+{
+    "CS1020": {
+        "children": [
+            {
+                "children": [],
+                "name": "CS1010"
+            }
+        ],
+        "name": "CS1020"
+    },
+    "CS1231": {
+        "children": [],
+        "name": "CS1231"
+    },
+    "CS3230": {
+        "children": [
+            {
+                "children": [
+                    {
+                        "children": [
+                            {
+                                "children": [
+                                    {
+                                        "children": [
+                                            {
+                                                "children": [],
+                                                "name": "CS1010"
+                                            }
+                                        ],
+                                        "name": "CS1020"
+                                    },
+                                    {
+                                        "children": [
+                                            {
+                                                "children": [],
+                                                "name": "CS1010E"
+                                            }
+                                        ],
+                                        "name": "CS1020E"
+                                    },
+                                    {
+                                        "children": [
+                                            {
+                                                "children": [],
+                                                "name": "CG1101"
+                                            }
+                                        ],
+                                        "name": "CG1103"
+                                    }
+                                ],
+                                "name": "or"
+                            }
+                        ],
+                        "name": "CS2010"
+                    },
+                    {
+                        "children": [
+                            {
+                                "children": [],
+                                "name": "CS1231"
+                            },
+                            {
+                                "children": [],
+                                "name": "MA1100"
+                            }
+                        ],
+                        "name": "or"
+                    }
+                ],
+                "name": "and"
+            }
+        ],
+        "name": "CS3230"
+    }
+}
