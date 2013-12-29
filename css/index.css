@@ -5,10 +5,11 @@ body {
 	margin:0px;
 	padding:0px;
 	background-color:#DDD;
+	font-family:Verdana, Geneva, sans-serif;
 }
 
 #mainPage {
-	min-width:800px;
+	min-width:930px;
 	width:100%;
 }
 
@@ -24,7 +25,6 @@ body {
 	color:#07F;
 	width:40%;
 	margin-top:15px;
-	font-family:Verdana, Geneva, sans-serif;
 }
 
 #webName {
@@ -46,7 +46,6 @@ body {
 	width:55%;
 	height:100%;
 	vertical-align:bottom;
-	font-family:Verdana, Geneva, sans-serif;
 	text-align:left;
 	right:5%;
 }
@@ -96,14 +95,14 @@ body {
 	position:relative;
 }
 
-#prevModuleSelector {
-	width:40%;
+#moduleSelector {
+	width:45%;
 	border-right:dashed medium white;
 	height:100%;
 	display:inline-block;
 	position:absolute;
 	z-index:1;
-	margin-left:-40%;
+	margin-left:-45%;
 }
 
 #buttonHolder {
@@ -136,6 +135,7 @@ body {
 
 #moduleText {
 	width:60%;
+	min-width:250px;
 	height:40px;
 	font-size:24px;
 	margin-top:30px;
@@ -143,8 +143,32 @@ body {
 	border-radius:10px;
 }
 
+#lessonInfoHolder {
+	text-align:center;
+	margin-top:20px;
+}
+
+#lessonInfo {
+	display:inline-block;
+}
+
+#lessonInfoHeader {
+	color:white;
+}
+
+.lessonInfoItem {
+	width:33%;
+}
+
+.lessonChoice {
+	padding-left:5px;
+	border-radius:10px;
+	padding-right:0px;
+	height:25px;
+}
+
 #prevModuleDiplay {
-	width:40%;
+	width:45%;
 	height:100%;
 	display:inline-block;
 	position:absolute;
@@ -152,12 +176,10 @@ body {
 
 #prevModuleListHeader {
 	font-size:20px;
-	font-family:Verdana, Geneva, sans-serif;
 	color:white;
 }
 
 #prevModuleListHolder {
-	font-family:Verdana, Geneva, sans-serif;
 	height:80%;
 	width:70%;
 	margin-left:15%;
@@ -185,6 +207,7 @@ body {
 	background-color:#03C;
 	color:white;
 	border-radius:10px;
+	position:relative;
 }
 
 .prevModuleCode {
@@ -203,8 +226,8 @@ body {
 	width:3%;
 	display:inline-block;
 	font-size:10px;
-	padding:15	px;
-	height:100%;
+	position:absolute;
+	margin-top:1%;
 }
 .prevModuleCodeClose:hover {
 	color:rgb(200,0,0);
@@ -219,7 +242,6 @@ body {
 }
 
 #moduleInfoDiv {
-	font-family:Verdana, Geneva, sans-serif;
 	position:fixed;
 	background-color:#FFF;
 	height:200px;

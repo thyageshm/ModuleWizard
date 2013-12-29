@@ -24,7 +24,7 @@
 </div>
 
 <div id="allContent">
-    <div id="moduleInfoDiv">
+    <div id="moduleInfoDiv" style="display:none">
     	<span id="closeModuleInfo">X</span>
     	<span id="moduleCodeHeader">MA1505</span>
         <table id = "moduleInfo" cellspacing="5px">
@@ -54,34 +54,57 @@
     <div id = "mainContent">
     <!-- The rest is not supposed to be here -->
         <div id="contentHolder">
-            <div id="prevModuleSelector">
+            <div id="moduleSelector">
                 <div id="buttonHolder">
-                    <button id = "ivleConnector" class = "contentButtons">IVLE</button>
-                    <button id = "moduleSelectionConfirmer" class = "contentButtons">Confirm</button>
+                    <button id = "moduleSelectionConfirmer" class = "contentButtons" style="margin-left:35%;">Confirm</button>
                 </div>
                 <div id = "moduleTextHolder">
-                    <input type = "text" id = "moduleText" name = "moduleText" placeholder="Module Code eg: MA1505" />
+                    <input type = "text" id = "moduleText" name = "moduleText" placeholder="Module Code eg: MA1505" style="margin-top:10px" />
+                </div>
+                <div id = "lessonInfoHolder">
+                	<table id = "lessonInfo">
+                    	<tr id = "lessonInfoHeader">
+                        	<td class = "lessonInfoItem">Lecture</td>
+                            <td class = "lessonInfoItem">Tutorial</td>
+                            <td class = "lessonInfoItem">Laboratory</td>
+                        </tr>
+                        <tr>
+                        	<td>
+                            	<select id = "lectureSlot" class = "lessonChoice">
+                                	<option value = 'nc'>Not Confirmed</option>
+                                	<option value = '1'>1 Monday 1-2</option>
+                                    <option value = '2'>2 Tuesday 10-11</option>
+                                    <option value = '3'>3 Tuesday 2-3</option>
+                                    <option value = '4'>4 Thrusday 4-5</option>
+                                    <option value = '5'>5 Friday 1-2</option>
+                                </select>
+                            </td>
+                            <td>
+                            	<select id = "tutorialSlot" class = "lessonChoice">
+                                	<option>Not Confirmed</option>
+                                	<option>A1 Monday 1-2</option>
+                                    <option>A2 Tuesday 10-11</option>
+                                    <option>A3 Tuesday 2-3</option>
+                                    <option>A4 Thrusday 4-5</option>
+                                    <option>A5 Friday 1-2</option>
+                                </select>
+                            </td>
+                            <td>
+                            	<select id = "laboratorySlot" class = "lessonChoice" disabled="disabled">
+                                	<option>No Laboratories</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </table>
                 </div>
             </div>
             <div id="prevModuleDiplay">
-            <span id = "prevModuleListHeader">Previously Taken Modules</span>
+            <span id = "prevModuleListHeader">Preallocated Modules</span>
                 <div id = "prevModuleListHolder">
                     <ul id = "prevModuleList">
                         <li class="prevModuleItem" onclick="alert('li');">
-                        	<span class = "prevModuleCode">MA1505</span>
+                        	<span class = "prevModuleCode">MA1505<br />Lecture Group 1<br />Tutorial Group A1</span>
                             <span class = "prevModuleCodeClose" onclick="alert('x');event.stopPropagation();">X</span>
-                        </li>
-                        <li class="prevModuleItem">
-                        	<span class = "prevModuleCode">MA1506</span>
-                            <span class = "prevModuleCodeClose">X</span>
-                        </li>
-                        <li class="prevModuleItem">
-                        	<span class = "prevModuleCode">EE1505</span>
-                            <span class = "prevModuleCodeClose">X</span>
-                        </li>
-                        <li class="prevModuleItem">
-                        	<span class = "prevModuleCode">CS1505</span>
-                            <span class = "prevModuleCodeClose">X</span>
                         </li>
                         <li class="prevModuleItem">
                         	<span class = "prevModuleCode">CS1505</span>
@@ -89,14 +112,6 @@
                         </li>
                         <li class="prevModuleItem">
                         	<span class = "prevModuleCode">PC1431</span>
-                            <span class = "prevModuleCodeClose">X</span>
-                        </li>
-                        <li class="prevModuleItem">
-                        	<span class = "prevModuleCode">GEK1001</span>
-                            <span class = "prevModuleCodeClose">X</span>
-                        </li>
-                        <li class="prevModuleItem">
-                        	<span class = "prevModuleCode">PL1101E</span>
                             <span class = "prevModuleCodeClose">X</span>
                         </li>
                     </ul>
@@ -116,3 +131,4 @@
 </div>
 </body>
 </html>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
