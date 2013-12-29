@@ -3,15 +3,10 @@ import sys
 sys.path.insert(0, 'app/scripts')
 
 # Script imports
-from BaseHandler import *
-from IVLE import *
-
-# Handlers
-class MainHandler(Handler):
-    def get(self):
-        self.render("ivle.html", IVLEKey=IVLE_LAPI_KEY)
-
+from base_handler import *
+from ivle import *
+from step_one import *
 
 # Handler Routing
-app = webapp2.WSGIApplication([('/', MainHandler),
+app = webapp2.WSGIApplication([('/', StepOneHandler),
     ('/ivle', IVLEHandler)], debug=True)

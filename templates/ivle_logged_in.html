@@ -6,9 +6,7 @@
     <script src="/js/jquery.cookie.js"></script>
 </head>
 <body>
-<h3>
-    Please be patient! Fetching your Modules....
-</h3>
+<h4>Please be patient! Fetching your Modules....</h4>
 <script type="text/javascript">
     $(function() {
         $.getJSON('https://ivle.nus.edu.sg/api/Lapi.svc/UserID_Get?APIKey={{ IVLEKey }}&Token={{ Token }}&callback=?', function(html){
@@ -22,6 +20,7 @@
                 }
                 $.cookie.json = true;
                 $.cookie('taken_mods', modules, { path: '/'});
+                window.opener.parserTakenModsCookie();
                 window.close();
             });
         });

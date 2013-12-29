@@ -1,6 +1,6 @@
 # Handler for IVLE Callback
 
-from BaseHandler import *
+from base_handler import *
 
 IVLE_LAPI_KEY = "nR7o7vzmqBA3BAXxPrLLD"
 CURRENT_YEAR = "2013/2014"
