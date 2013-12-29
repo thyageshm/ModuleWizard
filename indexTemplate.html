@@ -1,10 +1,118 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1 /DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" href="css/index.css" />
 <title>Module Wizard</title>
 </head>
 
 <body>
+
+<div id="mainPage">
+<div id="topBanner">
+    <div id="logo">
+        <span id="webName">Module Wizard</span><br />
+        <span id="logoSubtext">NUS Module Selector</span>
+    </div>
+    <div id="menubar">
+        <ul class="menu">
+            <li class = "menu-item selected">Home</li>
+            <li class = "menu-item">About</li>
+            <li class = "menu-item">Contact Us</li>
+        </ul>
+    </div>
+</div>
+
+<div id="allContent">
+    <div id="moduleInfoDiv">
+    	<span id="closeModuleInfo">X</span>
+    	<span id="moduleCodeHeader">MA1505</span>
+        <table id = "moduleInfo" cellspacing="5px">
+            <tr>
+                <td class = "moduleInfoHeader">Name</td>
+                <td class = "moduleInfoValue">Mathematics II</td>
+            </tr>
+            <tr>
+                <td class = "moduleInfoHeader">Faculty</td>
+                <td class = "moduleInfoValue">Science</td>
+            </tr>
+            <tr>
+                <td class = "moduleInfoHeader">Department</td>
+                <td class = "moduleInfoValue">Mathematics</td>
+            </tr>
+            <tr>
+                <td class = "moduleInfoHeader">Lecturers</td>
+                <td class = "moduleInfoValue">A,B,C</td>
+            </tr>
+            <tr>
+                <td class = "moduleInfoHeader">MCs</td>
+                <td class = "moduleInfoValue">4</td>
+            </tr>
+       </table>
+    </div>
+    
+    <div id = "mainContent">
+    <!-- The rest is not supposed to be here -->
+        <div id="contentHolder">
+            <div id="prevModuleSelector">
+                <div id="buttonHolder">
+                    <button id = "ivleConnector" class = "contentButtons">IVLE</button>
+                    <button id = "moduleSelectionConfirmer" class = "contentButtons">Confirm</button>
+                </div>
+                <div id = "moduleTextHolder">
+                    <input type = "text" id = "moduleText" name = "moduleText" placeholder="Module Code eg: MA1505" />
+                </div>
+            </div>
+            <div id="prevModuleDiplay">
+            <span id = "prevModuleListHeader">Previously Taken Modules</span>
+                <div id = "prevModuleListHolder">
+                    <ul id = "prevModuleList">
+                        <li class="prevModuleItem" onclick="alert('li');">
+                        	<span class = "prevModuleCode">MA1505</span>
+                            <span class = "prevModuleCodeClose" onclick="alert('x');event.stopPropagation();">X</span>
+                        </li>
+                        <li class="prevModuleItem">
+                        	<span class = "prevModuleCode">MA1506</span>
+                            <span class = "prevModuleCodeClose">X</span>
+                        </li>
+                        <li class="prevModuleItem">
+                        	<span class = "prevModuleCode">EE1505</span>
+                            <span class = "prevModuleCodeClose">X</span>
+                        </li>
+                        <li class="prevModuleItem">
+                        	<span class = "prevModuleCode">CS1505</span>
+                            <span class = "prevModuleCodeClose">X</span>
+                        </li>
+                        <li class="prevModuleItem">
+                        	<span class = "prevModuleCode">CS1505</span>
+                            <span class = "prevModuleCodeClose">X</span>
+                        </li>
+                        <li class="prevModuleItem">
+                        	<span class = "prevModuleCode">PC1431</span>
+                            <span class = "prevModuleCodeClose">X</span>
+                        </li>
+                        <li class="prevModuleItem">
+                        	<span class = "prevModuleCode">GEK1001</span>
+                            <span class = "prevModuleCodeClose">X</span>
+                        </li>
+                        <li class="prevModuleItem">
+                        	<span class = "prevModuleCode">PL1101E</span>
+                            <span class = "prevModuleCodeClose">X</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <!-- The above are not supposed to be here -->
+    </div>
+</div>
+<hr />
+<div id="credits">
+<div class="creditInfo">Designed and Programmed by Thyagesh and Ashray</div>
+<div class="creditInfo">Illustrated by Tejas</div>
+<div class="creditInfo">Powered by Google</div>
+</div>
+
+</div>
 </body>
 </html>
