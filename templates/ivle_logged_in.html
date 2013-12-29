@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IVLE Login</title>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="/js/jquery.cookie.js"></script>
+</head>
+<body>
+<h3>
+    Please be patient! Fetching your Modules....
+</h3>
+<script type="text/javascript">
+    $(function() {
+        $.getJSON('https://ivle.nus.edu.sg/api/Lapi.svc/UserID_Get?APIKey={{ IVLEKey }}&Token={{ Token }}&callback=?', function(html){
+            $.getJSON('https://ivle.nus.edu.sg/api/Lapi.svc/Modules_Taken?APIKey={{ IVLEKey }}&AuthToken={{ Token }}&StudentID='+html+'&callback=?', function(html) {
+                var modules = [];
+                if (html["Comments"] == "Valid login!") {
+                    html["Results"].forEach(function(module) {
+                        if (module["AcadYear"] != '{{ CurrentYear }}' || module["Semester"] != '{{ CurrentSem }}')
+                            modules.push(module);
+                    });
+                }
+                $.cookie.json = true;
+                $.cookie('taken_mods', modules, { path: '/'});
+                window.close();
+            });
+        });
+    });
+
+</script>
+</body>
+</html>

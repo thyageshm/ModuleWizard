@@ -1,27 +1,17 @@
-import webapp2
-import jinja2
-import os
+# Adding scripts directory to PATH
+import sys
+sys.path.insert(0, 'app/scripts')
 
-template_dir = os.path.join(os.path.dirname(__file__), 'templates')
-jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir),
-                                       autoescape=True)
+# Script imports
+from BaseHandler import *
+from IVLE import *
 
-class Handler(webapp2.RequestHandler):
-    """Handler Class with Utility functions for Templates"""
-
-    def __write__(self, *a, **kw):
-        self.response.out.write(*a, **kw)
-
-    def __render_str__(self, template, **params):
-        t = jinja_environment.get_template(template)
-        return t.render(params)
-
-    def render(self, template, **kw):
-        self.__write__(self.__render_str__(template, **kw))
-
-
+# Handlers
 class MainHandler(Handler):
     def get(self):
-        self.response.out.write("Hello World!")
+        self.render("ivle.html", IVLEKey=IVLE_LAPI_KEY)
 
-app = webapp2.WSGIApplication([('/', MainHandler)])
+
+# Handler Routing
+app = webapp2.WSGIApplication([('/', MainHandler),
+    ('/ivle', IVLEHandler)], debug=True)

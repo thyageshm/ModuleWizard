@@ -430,8 +430,8 @@ for day,time in timeRestrictionPairs:
     timeRestrictions.append(TimeSlot(day,time))
 
 def checkModuleAdding(testCode, noTimetableModCount):
-    filemods = open('modsData.txt')
-    fileLtypes = open('LtypesData.txt')
+    filemods = open('timetabling/modsData.txt')
+    fileLtypes = open('timetabling/LtypesData.txt')
 
     modsJson = json.load(filemods)
     LtypesJson = json.load(fileLtypes)
@@ -462,9 +462,9 @@ def checkModuleAdding(testCode, noTimetableModCount):
         
 
 def loadAllModData():
-    fileMods = open('modsData.txt')
-    fileLtypes = open('LtypesData.txt')
-    fileDeptToFac = open('DepartmentToFaculty.txt')
+    fileMods = open('timetabling/modsData.txt')
+    fileLtypes = open('timetabling/LtypesData.txt')
+    fileDeptToFac = open('timetabling/DepartmentToFaculty.txt')
 
     modsJson = json.load(fileMods)
     LtypesJson = json.load(fileLtypes)
