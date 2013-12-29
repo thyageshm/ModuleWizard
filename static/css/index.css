@@ -219,13 +219,14 @@ body {
 
 .prevModuleItem:hover {
 	background-color:#07F;
+
 	cursor:pointer;
 }
 
 .prevModuleCodeClose {
 	width:3%;
 	display:inline-block;
-	font-size:10px;
+	font-size:20px;
 	position:absolute;
 	margin-top:1%;
 }

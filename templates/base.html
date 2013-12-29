@@ -1,0 +1,70 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1 /DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" href="/css/index.css" />
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script src="/js/jquery.cookie.js"></script>
+    <title>Module Wizard</title>
+</head>
+
+<body>
+
+<div id="mainPage">
+    <div id="topBanner">
+        <a href="/">
+            <div id="logo">
+                <span id="webName">Module Wizard</span><br />
+                <span id="logoSubtext">NUS Module Selector</span>
+            </div>
+        </a>
+        <div id="menubar">
+            <ul class="menu">
+                <li class = "menu-item selected">Home</li>
+                <li class = "menu-item">About</li>
+                <li class = "menu-item">Contact Us</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="allContent">
+        <div id="moduleInfoDiv" style="display:none">
+            <span id="closeModuleInfo">X</span>
+            <span id="moduleCodeHeader">MA1505</span>
+            <table id = "moduleInfo" cellspacing="5px">
+                <tr>
+                    <td class = "moduleInfoHeader">Name</td>
+                    <td class = "moduleInfoValue">Mathematics II</td>
+                </tr>
+                <tr>
+                    <td class = "moduleInfoHeader">Faculty</td>
+                    <td class = "moduleInfoValue">Science</td>
+                </tr>
+                <tr>
+                    <td class = "moduleInfoHeader">Department</td>
+                    <td class = "moduleInfoValue">Mathematics</td>
+                </tr>
+                <tr>
+                    <td class = "moduleInfoHeader">Lecturers</td>
+                    <td class = "moduleInfoValue">A,B,C</td>
+                </tr>
+                <tr>
+                    <td class = "moduleInfoHeader">MCs</td>
+                    <td class = "moduleInfoValue">4</td>
+                </tr>
+            </table>
+        </div>
+
+        <div id = "mainContent">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    <hr />
+    <div id="credits">
+        <div class="creditInfo">Designed and Programmed by Thyagesh and Ashray</div>
+        <div class="creditInfo">Illustrated by Tejas</div>
+        <div class="creditInfo">Powered by Google</div>
+    </div>
+</div>
+</body>
+</html>
