@@ -9,10 +9,8 @@ def loadModuleList():
             "value": data[module]["ModuleCode"] + " " + data[module]["ModuleTitle"],
             "tokens": data[module]["ModuleTitle"].split(" ")+[data[module]["ModuleCode"]]
         })
-
     with open('../data/mod_list.json', 'w') as outfile:
         json.dump(newModuleList, outfile, sort_keys=True, indent=4)
-
     moduleCodeList = json.loads(urllib.urlopen("http://api.nusmods.com/2013-2014/2/moduleList.json").read())
     with open('../data/modcodes_list.json', 'w') as outfile_list:
         json.dump(moduleCodeList, outfile_list, sort_keys=True, indent=4)
