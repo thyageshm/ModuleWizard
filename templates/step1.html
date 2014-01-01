@@ -1,48 +1,49 @@
 {% extends "base.html" %}
 {% block content %}
-    <div id="contentHolder">
-        <div id="moduleSelector">
-            <div id="buttonHolder">
-                <button id = "ivleConnector" class = "contentButtons" onclick="ivleVerify(); return false;">IVLE</button>
-                <button id = "moduleSelectionConfirmer" class = "contentButtons">Confirm</button>
-            </div>
-            <div id = "moduleTextHolder">
-                <input type = "text" id = "moduleText" name = "moduleText" placeholder="Module Code eg: MA1505" />
-            </div>
+<div id="contentHolder">
+    <div id="moduleSelector">
+        <div id="buttonHolder">
+            <button id = "ivleConnector" class = "contentButtons" onclick="ivleVerify(); return false;">Get from IVLE</button>
+            <button id = "moduleSelectionConfirmer" class = "contentButtons" onclick="nextStep(); return false;">Confirm</button>
         </div>
-        <div id="prevModuleDiplay">
-            <span id = "prevModuleListHeader">Previously Taken Modules</span>
-            <div id = "prevModuleListHolder">
-                <ul id = "prevModuleList">
-                </ul>
-            </div>
+        <div id = "moduleTextHolder">
+            <input id = "moduleInputBox" class="typeahead" type="text" placeholder="Module Code or Name" autocomplete="off" spellcheck="false">
         </div>
     </div>
+    <div id="prevModuleDiplay">
+        <span id = "prevModuleListHeader">Previously Taken Modules</span>
+        <div id = "prevModuleListHolder">
+            <ul id = "prevModuleList">
+            </ul>
+        </div>
+    </div>
+</div>
 
-    <script src="/js/stepone.js"></script>
-    <script type="text/javascript">
-        // IVLE Login Related JS
-        var verificationDialog = null;
+<script src="/js/typeahead.js"></script>
+<script src="/js/stepone.js"></script>
+<script type="text/javascript">
+    // IVLE Login Related JS
+    var verificationDialog = null;
 
-        function ivleVerify() {
-            if (verificationDialog == null || verificationDialog.closed) {
-                var w = 255;
-                var h = 180;
-                var left = (screen.width / 2) - (w / 2);
-                var top = (screen.height / 3) - (h / 2);
+    function ivleVerify() {
+        if (verificationDialog == null || verificationDialog.closed) {
+            var w = 255;
+            var h = 180;
+            var left = (screen.width / 2) - (w / 2);
+            var top = (screen.height / 3) - (h / 2);
 
-                verificationDialog = window.open(
-                        'https://ivle.nus.edu.sg/api/login/?apikey={{ IVLEKey }}&url=http://localhost:8080/ivle',
-                        'IVLEVerificationDialog',
-                        'dependent, toolbar=no, location=no, directories=no, ' +
-                                'status=no, menubar=no, scrollbars' +
-                                '=no, resizable=no, copyhistory=no' +
-                                ', width=' + w + ', height=' + h +
-                                ', top=' + top + ', left=' + left);
-            }
-            else
-                verificationDialog.focus();
+            verificationDialog = window.open(
+                    'https://ivle.nus.edu.sg/api/login/?apikey={{ IVLEKey }}&url=http://localhost:8080/ivle',
+                    'IVLEVerificationDialog',
+                    'dependent, toolbar=no, location=no, directories=no, ' +
+                            'status=no, menubar=no, scrollbars' +
+                            '=no, resizable=no, copyhistory=no' +
+                            ', width=' + w + ', height=' + h +
+                            ', top=' + top + ', left=' + left);
         }
-    </script>
+        else
+            verificationDialog.focus();
+    }
+</script>
 
 {% endblock %}

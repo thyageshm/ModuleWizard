@@ -1,56 +1,71 @@
-import urllib, json
-modCodes = ["CS1020","CS3230","CS1231"]
-data = {}
-
-def getPreReqDataFromURL():
-    data = {}
-    for code in modCodes:
-        url = "http://nusmodmaven.appspot.com/gettree?modName="+code
-        response = urllib.urlopen(url);
-        data[code] = json.loads(response.read())
-    return data
-    preReqFile = open('preReqTestData.txt','w')
-    preReqFile.write(json.dumps(data, sort_keys=True,indent=4, separators=(',', ': ')))
-    preReqFile.close()
-
-def loadPreReqDataFromFile():
-    preReqFile = open('preReqTestData.txt')
-    data = json.loads(preReqFile.read())
-    preReqFile.close()
-    return data
+import urllib, json, os
 
 def loadModuleList():
-    url = "http://api.nusmods.com/2013-2014/2/moduleList.json"
-    response = urllib.urlopen(url);
-    moduleList = json.loads(response.read())
-    return moduleList.keys()
+    moduleList = json.loads(urllib.urlopen("http://api.nusmods.com/2013-2014/2/moduleCodes.json").read())
+    newModuleList = []
+    for module in moduleList:
+        print module
+        newModuleList.append({
+            "value": data[module]["ModuleCode"] + " " + data[module]["ModuleTitle"],
+            "tokens": data[module]["ModuleTitle"].split(" ")+[data[module]["ModuleCode"]]
+        })
 
-def convertData():
-    convertedData = {}
-    for testMod in data.values():
-        if len(testMod['children']) > 0:
-            convertedData[str(testMod['name'])] = [reduceChild(testMod['children'][0])]
-        else:
-            convertedData[str(testMod['name'])] = [{}]
+    with open('../data/mod_list.json', 'w') as outfile:
+        json.dump(newModuleList, outfile, sort_keys=True, indent=4)
 
-    return convertedData
-
-def reduceChild(currentChild):
-    ##print currentChild
-    if not currentChild:
-        return currentChild
-    currentChildName = str(currentChild.get('name',''))
-    ##print currentChildName
-    if currentChildName in ["and","or"]:
-        return {"name":currentChildName,"children": [reduceChild(c) for c in currentChild['children']]}
-    else:
-        return {"name":currentChildName}
+    moduleCodeList = json.loads(urllib.urlopen("http://api.nusmods.com/2013-2014/2/moduleList.json").read())
+    with open('../data/modcodes_list.json', 'w') as outfile_list:
+        json.dump(moduleCodeList, outfile_list, sort_keys=True, indent=4)
 
 
-data = loadPreReqDataFromFile()
-## modCodes = loadModuleList()
-## data = getPreReqDataFromURL()
-finalData = convertData()
-preReqFile = open('preReqData.txt','w')
-preReqFile.write(json.dumps(finalData, sort_keys=True,indent=4, separators=(',', ': ')))
-preReqFile.close()
+# def reduceChild(currentChild):
+#     if currentChild["name"] in ["and", "or"]:
+#         new_data = []
+#         for child in currentChild["children"]:
+#             new_data += reduceChild(child)
+#         return new_data if currentChild["name"] == "and" else [new_data]
+#     elif data.has_key(currentChild["name"]) and isinstance(data[currentChild["name"]]["Preclusion"], list):
+#         return [currentChild["name"]]+data[currentChild["name"]]["Preclusion"]
+#     else:
+#         return [currentChild["name"]]
+#
+#
+# def convertData(data):
+#     new_data = {}
+#     for mod in modCodes:
+#         newData = []
+#         for child in data[mod]["Tree"]["children"]:
+#             newData += reduceChild(child)
+#         new_data[mod] = newData
+#     print new_data
+#     return new_data
+#
+
+# def convertData():
+#     convertedData = {}
+#     for testMod in data.values():
+#         if len(testMod['children']) > 0:
+#             convertedData[str(testMod['name'])] = [reduceChild(testMod['children'][0])]
+#         else:
+#             convertedData[str(testMod['name'])] = [{}]
+#
+#     return convertedData
+#
+# def reduceChild(currentChild):
+#     ##print currentChild
+#     if not currentChild:
+#         return currentChild
+#     currentChildName = str(currentChild.get('name',''))
+#     ##print currentChildName
+#     if currentChildName in ["and","or"]:
+#         return {"name":currentChildName,"children": [reduceChild(c) for c in currentChild['children']]}
+#     else:
+#         return {"name":currentChildName}
+
+data = json.load(open("../data/modInfo.json"))
+if not os.path.isfile("../data/mod_list.json"):
+    loadModuleList()
+# finalData = convertData(data)
+# with open('../data/prereq_data.json', 'w') as outfile:
+#     json.dump(finalData, outfile, sort_keys=True, indent=4)
+
