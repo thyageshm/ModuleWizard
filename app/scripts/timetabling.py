@@ -422,8 +422,8 @@ class ModuleSet(object):
 
 ##Constants or hardcoded variables
 dayToInt = {"MONDAY":1,"TUESDAY":2,"WEDNESDAY":3,"THURSDAY":4,"FRIDAY":5,"SATURDAY":6,"SUNDAY":7}
-facChoices = ['SCIENCE',"ENGINEERING",'ARTS & SOCIAL SCIENCES']
-modCodeList = {'PC1432':{"Lecture":"1","Laboratory":"D03"},'MA1506':{"Lecture":"D","Tutorial":"A16"},'CS1231':{"Tutorial":"6","Lecture":"1"},'CS2103':{},"MUA3162":{},"MUA4219":{}}
+facChoices = ['ENGINEERING']
+modCodeList = {'ST2334':{"Lecture":"SL1","Tutorial":"T1"},'SSA2209':{"Tutorial":"D1"},'EE2024':{"Tutorial":"T9",'Laboratory':'B1'},'EE2023':{},"EE2031":{'Laboratory':'B2'}}
 timeRestrictionPairs = [(2,800),(2,900)]
 timeRestrictions = []
 for day,time in timeRestrictionPairs:
@@ -602,5 +602,9 @@ modList,testMods = generatePossibleModules(modCodeList,loadedData)
 for mod in testMods:
     for l in mod.getCompulsoryLessons():
         print(l)
+fileN = open("test.txt",'w')
+for mod in modList:
+    fileN.write(mod+'\n')
+fileN.close()
 ##mod = checkModuleAdding("YLS1201", 0)
 ##mod.setBaseparams()
