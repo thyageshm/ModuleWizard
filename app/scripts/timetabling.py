@@ -2,6 +2,8 @@ import json,copy
 from time import clock
 ##Start of class hierarchy
 
+currentSem = 'Sem2'
+
 class TimeSlot(object):
     def __init__(self, day, time):
         self.day = day
@@ -462,7 +464,7 @@ def checkModuleAdding(testCode, noTimetableModCount):
         
 
 def loadAllModData():
-    fileMods = open('modsData.txt')
+    fileMods = open('../data/modInfo.json')
     fileLtypes = open('LtypesData.txt')
     fileDeptToFac = open('DepartmentToFaculty.txt')
 
@@ -476,6 +478,8 @@ def loadAllModData():
 
     modSet = ModuleSet()
     noTimetableModCount = 0
+
+    preReqData = {}
     
     for modData in modsJson:
         modcode = str(modData['ModuleCode'])
@@ -483,7 +487,8 @@ def loadAllModData():
         modDept = modData.get('Department','')
         newmod = Module(modcode,examDate,modDept)
         try:
-            for lesson in modData['Timetable']:
+            preReqData[modcode] = 
+            for lesson in modData['Timetable'][currentSem]:
                 if lesson['LessonType'] == 'LABORATORY':
                     newlesson = Laboratory(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=dayToInt[lesson['DayText']]))
                 else:
@@ -574,7 +579,7 @@ def filterByPrereq(modCodeList,masterModSet):
 
 def isEligibleByPrereq(modCodeToTake,modCodesAlreadyTaken):
     preReqDict = preReqData[modCodeToTake]
-    return satisfiesPre(preReqDict,modCodesAlreadyTaken)
+    return satisfiesPrereq(preReqDict,modCodesAlreadyTaken)
 
 def hasNoExamConflict(mod,examSlots):
     return mod.getExamDate() == '' or mod.getExamDate() not in examSlots
@@ -586,10 +591,12 @@ def isAtWrongTime(lesson):
     return any(lesson.hasSlot(timeslot) for timeslot in timeRestrictions)
 
 def satisfiesPrereq(child, modList):
+    if child == []:
+        return True
     if child['name'] == "and":
-       return all(satisfiesPrereq(c1) for c1 in child['children'])
+       return all(satisfiesPrereq(c1,modList) for c1 in child['children'])
     elif child['name'] == "or":
-       return any(satisfiesPrereq(c1) for c1 in child['children'])
+       return any(satisfiesPrereq(c1, modList) for c1 in child['children'])
     else:
         return child['name'] in modList
 
