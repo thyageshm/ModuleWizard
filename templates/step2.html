@@ -2,6 +2,7 @@
 {% block content %}
 <div id="contentHolder">
     <div id="semSelector">
+        <label>Select Semester: </label>
         <select id="semValue">
             <option value="1" {% if CurrentSem == "1" %} selected {% endif %}>Semester 1</option>
             <option value="2" {% if CurrentSem == "2" %} selected {% endif %}>Semester 2</option>
@@ -49,7 +50,8 @@
             </table>
         </div>
         <div id="buttonHolder">
-            <button id = "moduleSelectionConfirmer" class = "contentButtons" style="margin-left:35%;">Confirm</button>
+            <button id = "moduleAdd" class = "contentButtons" onclick="addModule(); return false;">Add Module</button>
+            <button id = "moduleSelectionConfirmer" class = "contentButtons" onclick="nextStep(); return false;">Confirm</button>
         </div>
     </div>
     <div id="prevModuleDiplay">
