@@ -3,4 +3,4 @@ from base_handler import *
 
 class StepTwoHandler(Handler):
     def get(self):
-        self.render("step2.html")
+        self.render("step2.html", CurrentSem=CURRENT_SEM)

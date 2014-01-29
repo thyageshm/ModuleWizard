@@ -3,14 +3,14 @@
 <div id="contentHolder">
     <div id="semSelector">
         <select id="semValue">
-            <option value="sem1">Semester 1</option>
-            <option value="sem2">Semester 2</option>
+            <option value="1" {% if CurrentSem == "1" %} selected {% endif %}>Semester 1</option>
+            <option value="2" {% if CurrentSem == "2" %} selected {% endif %}>Semester 2</option>
         </select>
-        <img src="/img/ajax-loader.gif"/>
+        <img id="loadingGif" src="/img/ajax-loader.gif" style="position: absolute; padding-left: 8px;"/>
     </div>
-    <div id="moduleSelector" style="display: none">
+    <div id="moduleSelector" style="display: none; top: 55px;">
         <div id = "moduleTextHolder" style="top: 10px;">
-            <input id = "moduleInputBox" class="typeahead" type="text" placeholder="Module Code or Name" autocomplete="off" spellcheck="false">
+            <input id = "modulerInputBox" class="typeahead" type="text" placeholder="Module Code or Name" autocomplete="off" spellcheck="false">
         </div>
         <div id = "lessonInfoHolder">
             <table id = "lessonInfo">
@@ -72,7 +72,9 @@
         </div>
     </div>
 </div>
-
+<script type="text/javascript">
+    var currentSem = {{ CurrentSem }};
+</script>
 <script src="/js/typeahead.js"></script>
 <script src="/js/steptwo.js"></script>
 {% endblock %}

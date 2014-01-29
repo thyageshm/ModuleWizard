@@ -22,6 +22,7 @@ function matchFound(modules, item) {
 }
 
 function nextStep() {
+    $("#moduleInputBox").typeahead('destroy');
     window.location.href = "/preallocation";
 }
 
@@ -79,7 +80,7 @@ function initAllInputs() {
     $(".prevModuleCodeClose").click(handleModuleRemove);
     var inputBox = $("#moduleInputBox");
     inputBox.typeahead({
-        name: 'module-lookup',
+        name: 'module-lookup-all',
         prefetch: '/data/mod_list_all.json',
         limit: 8
     });

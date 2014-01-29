@@ -6,7 +6,9 @@ template_dir = os.path.join(os.path.join(os.path.join(os.path.dirname(__file__),
 jinja_environment = jinja2.Environment(loader=jinja2.FileSystemLoader(template_dir),
                                        autoescape=True)
 
-current_sem = ["Sem"]
+CURRENT_YEAR = "2013/2014"
+CURRENT_SEM = "2"
+
 class Handler(webapp2.RequestHandler):
     """Handler Class with Utility functions for Templates"""
 
