@@ -1,5 +1,7 @@
 import urllib, json, os
 
+sampleModuleCode = "CG3002"
+
 def loadModuleList():
 
     #moduleList_sem1 = json.loads(urllib.urlopen("http://api.nusmods.com/2013-2014/2/moduleCodes.json").read())
@@ -32,7 +34,7 @@ def loadModuleList():
         })
 
     with open('../data/modInfo_Sample.json', 'w') as outfile:
-        json.dump(data["CG1103"], outfile, sort_keys=True, indent=4, encoding="ascii")
+        json.dump(data[sampleModuleCode], outfile, sort_keys=True, indent=4, encoding="ascii")
     with open('../data/mod_list_all.json', 'w') as outfile:
         json.dump(allModuleCodeList, outfile, sort_keys=True, indent=4)
     with open('../data/modcodes_list_all.json', 'w') as outfile:
