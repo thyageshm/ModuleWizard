@@ -468,7 +468,7 @@ def loadAllModData():
     fileLtypes = open('LtypesData.txt')
     fileDeptToFac = open('DepartmentToFaculty.txt')
 
-    modsJson = json.load(fileMods)
+    modsJson = json.load(fileMods,encoding='ascii')
     LtypesJson = json.load(fileLtypes)
     deptToFac = json.load(fileDeptToFac)
 
@@ -481,21 +481,21 @@ def loadAllModData():
 
     preReqData = {}
     
-    for modData in modsJson:
-        modcode = str(modData['ModuleCode'])
+    for modcode,modData in modsJson.items():
+        modcode = str(modcode)
         examDate = modData.get('ExamDate','')
         modDept = modData.get('Department','')
         newmod = Module(modcode,examDate,modDept)
-        try:
-            preReqData[modcode] = 
+        preReqData[modcode] = modData['Tree']['children']
+        print isinstance(modData['Timetable'],str)
+        if not isinstance(modData['Timetable'],str): ## is not "Not Applicable.":
             for lesson in modData['Timetable'][currentSem]:
                 if lesson['LessonType'] == 'LABORATORY':
                     newlesson = Laboratory(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=dayToInt[lesson['DayText']]))
                 else:
                     newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=dayToInt[lesson['DayText']]))
                 newmod.addLesson(newlesson)
-        except KeyError:
-            noTimetableModCount += 1
+        
         modSet.addModule(newmod)
     return (modSet,deptToFac)
 
@@ -604,14 +604,14 @@ loadedData,deptToFac = loadAllModData()
 ##modData = copy.deepcopy(loadedData)
     
 print("starting now...")
-modList,testMods = generatePossibleModules(modCodeList,loadedData)
-
-for mod in testMods:
-    for l in mod.getCompulsoryLessons():
-        print(l)
-fileN = open("test.txt",'w')
-for mod in modList:
-    fileN.write(mod+'\n')
-fileN.close()
+## modList,testMods = generatePossibleModules(modCodeList,loadedData)
+## 
+## for mod in testMods:
+##     for l in mod.getCompulsoryLessons():
+##         print(l)
+## fileN = open("test.txt",'w')
+## for mod in modList:
+##     fileN.write(mod+'\n')
+## fileN.close()
 ##mod = checkModuleAdding("YLS1201", 0)
 ##mod.setBaseparams()
