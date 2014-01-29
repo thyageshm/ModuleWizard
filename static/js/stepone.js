@@ -2,7 +2,7 @@ var modCodesList = null;
 
 $(function() {
     $.ajax({
-        url: "/data/modcodes_list.json",
+        url: "/data/modcodes_list_all.json",
         dataType: "json",
         success: function(response) {
             modCodesList = response;
@@ -80,7 +80,7 @@ function initAllInputs() {
     var inputBox = $("#moduleInputBox");
     inputBox.typeahead({
         name: 'module-lookup',
-        prefetch: '/data/mod_list.json',
+        prefetch: '/data/mod_list_all.json',
         limit: 8
     });
     inputBox.keyup(function (e) {

@@ -1,12 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 <div id="contentHolder">
-    <div id="moduleSelector">
-        <div id="buttonHolder">
-            <button id = "moduleSelectionConfirmer" class = "contentButtons" style="margin-left:35%;">Confirm</button>
-        </div>
-        <div id = "moduleTextHolder">
-            <input type = "text" id = "moduleText" name = "moduleText" placeholder="Module Code eg: MA1505" style="margin-top:10px" />
+    <div id="semSelector">
+        <select id="semValue">
+            <option value="sem1">Semester 1</option>
+            <option value="sem2">Semester 2</option>
+        </select>
+        <img src="/img/ajax-loader.gif"/>
+    </div>
+    <div id="moduleSelector" style="display: none">
+        <div id = "moduleTextHolder" style="top: 10px;">
+            <input id = "moduleInputBox" class="typeahead" type="text" placeholder="Module Code or Name" autocomplete="off" spellcheck="false">
         </div>
         <div id = "lessonInfoHolder">
             <table id = "lessonInfo">
@@ -44,6 +48,9 @@
                 </tr>
             </table>
         </div>
+        <div id="buttonHolder">
+            <button id = "moduleSelectionConfirmer" class = "contentButtons" style="margin-left:35%;">Confirm</button>
+        </div>
     </div>
     <div id="prevModuleDiplay">
     <span id = "prevModuleListHeader">Preallocated Modules</span>
@@ -65,4 +72,7 @@
         </div>
     </div>
 </div>
+
+<script src="/js/typeahead.js"></script>
+<script src="/js/steptwo.js"></script>
 {% endblock %}

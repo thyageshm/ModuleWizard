@@ -4,7 +4,7 @@ from base_handler import *
 
 IVLE_LAPI_KEY = "nR7o7vzmqBA3BAXxPrLLD"
 CURRENT_YEAR = "2013/2014"
-CURRENT_SEM = "1"
+CURRENT_SEM = "2"
 
 
 class IVLEHandler(Handler):
