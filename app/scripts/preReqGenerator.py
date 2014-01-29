@@ -1,19 +1,50 @@
 import urllib, json, os
 
 def loadModuleList():
-    moduleList = json.loads(urllib.urlopen("http://api.nusmods.com/2013-2014/2/moduleCodes.json").read())
-    newModuleList = []
-    for module in moduleList:
-        print module
-        newModuleList.append({
-            "value": data[module]["ModuleCode"] + " " + data[module]["ModuleTitle"],
-            "tokens": data[module]["ModuleTitle"].split(" ")+[data[module]["ModuleCode"]]
+
+    #moduleList_sem1 = json.loads(urllib.urlopen("http://api.nusmods.com/2013-2014/2/moduleCodes.json").read())
+    #moduleList_sem2 = json.loads(urllib.urlopen("http://api.nusmods.com/2013-2014/1/moduleCodes.json").read())
+
+    allModuleCodeList = []
+    allModuleCodeTitleList = {}
+    currentYearModuleCodeList = {"Sem1": [], "Sem2": []}
+    currentYearModuleCodeList_sem1 = json.loads(urllib.urlopen("http://api.nusmods.com/2013-2014/1/moduleList.json").read())
+    currentYearModuleCodeList_sem2 = json.loads(urllib.urlopen("http://api.nusmods.com/2013-2014/2/moduleList.json").read())
+
+    for module in data:
+        if  module != "ModList":
+            allModuleCodeList.append({
+                "value": data[module]["ModuleCode"] + " " + data[module]["ModuleTitle"],
+                "tokens": data[module]["ModuleTitle"].split(" ")+[data[module]["ModuleCode"]]
+            })
+            allModuleCodeTitleList[module] = data[module]["ModuleTitle"]
+
+    for module in currentYearModuleCodeList_sem1:
+        currentYearModuleCodeList["Sem1"].append({
+            "value": module + " " + currentYearModuleCodeList_sem1[module],
+            "tokens": currentYearModuleCodeList_sem1[module].split(" ")+[module]
         })
-    with open('../data/mod_list.json', 'w') as outfile:
-        json.dump(newModuleList, outfile, sort_keys=True, indent=4)
-    moduleCodeList = json.loads(urllib.urlopen("http://api.nusmods.com/2013-2014/2/moduleList.json").read())
-    with open('../data/modcodes_list.json', 'w') as outfile_list:
-        json.dump(moduleCodeList, outfile_list, sort_keys=True, indent=4)
+
+    for module in currentYearModuleCodeList_sem2:
+        currentYearModuleCodeList["Sem2"].append({
+            "value": module + " " + currentYearModuleCodeList_sem2[module],
+            "tokens": currentYearModuleCodeList_sem2[module].split(" ")+[module]
+        })
+
+    with open('../data/modInfo_Sample.json', 'w') as outfile:
+        json.dump(data["CG1103"], outfile, sort_keys=True, indent=4, encoding="ascii")
+    with open('../data/mod_list_all.json', 'w') as outfile:
+        json.dump(allModuleCodeList, outfile, sort_keys=True, indent=4)
+    with open('../data/modcodes_list_all.json', 'w') as outfile:
+        json.dump(allModuleCodeTitleList, outfile, sort_keys=True, indent=4)
+    with open('../data/modcodes_list_sem1.json', 'w') as outfile:
+        json.dump(currentYearModuleCodeList_sem1, outfile, sort_keys=True, indent=4)
+    with open('../data/modcodes_list_sem2.json', 'w') as outfile:
+        json.dump(currentYearModuleCodeList_sem2, outfile, sort_keys=True, indent=4)
+    with open('../data/mod_list_sem1.json', 'w') as outfile:
+        json.dump(currentYearModuleCodeList["Sem1"], outfile, sort_keys=True, indent=4)
+    with open('../data/mod_list_sem2.json', 'w') as outfile:
+        json.dump(currentYearModuleCodeList["Sem2"], outfile, sort_keys=True, indent=4)
 
 
 # def reduceChild(currentChild):
@@ -60,9 +91,9 @@ def loadModuleList():
 #     else:
 #         return {"name":currentChildName}
 
-data = json.load(open("../data/modInfo.json"))
-if not os.path.isfile("../data/mod_list.json"):
-    loadModuleList()
+data = json.load(open("../data/modInfo.json"), encoding="ascii")
+#if not os.path.isfile("../data/mod_list_all.json"):
+loadModuleList()
 # finalData = convertData(data)
 # with open('../data/prereq_data.json', 'w') as outfile:
 #     json.dump(finalData, outfile, sort_keys=True, indent=4)

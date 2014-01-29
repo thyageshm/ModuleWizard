@@ -1,0 +1,35 @@
+{
+    "Department": "COMPUTING & ENGINEERING", 
+    "ExamDate": "Not Applicable.", 
+    "ExamDuration": "P2H", 
+    "ExamOpenBook": true, 
+    "ExamVenue": "SOC SR1", 
+    "ModuleCode": "CG1103", 
+    "ModuleCredit": "4", 
+    "ModuleDescription": "This module is the second part of a three-part series on introductory programming and problem solving by computing. It continues the introduction that begins in CG1101, and emphasises object-oriented programming with application to simple data structures. Topics covered include object-oriented problem modeling with concepts of objects, classes and methods, object-oriented problem forrmulation and problem solving, data structure implementation strageties, abstraction and encapsulation of data structures, object-oriented programming constructs, use of APIs and class libraries, exception handling, lists, linked lists, stacks, queues, hash tables and their algorithmic design, various forms of sorting and searching methods, recursive algorithms, and Big-O notation.", 
+    "ModuleTitle": "Data Structures and Algorithms I", 
+    "Preclusion": [
+        "CG1102", 
+        "CS1102", 
+        "CS1020", 
+        "CS2020", 
+        "CS1102C", 
+        "CS1020E", 
+        "CS1102S"
+    ], 
+    "Prerequisite": "CG1101", 
+    "Timetable": "Not Applicable.", 
+    "Tree": {
+        "children": [
+            {
+                "children": [], 
+                "name": "CG1101"
+            }
+        ], 
+        "name": "CG1103"
+    }, 
+    "Types": [
+        "Module"
+    ], 
+    "Workload": "2-1-1-3-3"
+}
