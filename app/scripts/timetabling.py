@@ -468,7 +468,7 @@ def loadAllModData():
     fileLtypes = open('LtypesData.txt')
     fileDeptToFac = open('DepartmentToFaculty.txt')
 
-    modsJson = json.load(fileMods,encoding='ascii')
+    modsJson = json.load(fileMods)
     LtypesJson = json.load(fileLtypes)
     deptToFac = json.load(fileDeptToFac)
 
@@ -487,9 +487,8 @@ def loadAllModData():
         modDept = modData.get('Department','')
         newmod = Module(modcode,examDate,modDept)
         preReqData[modcode] = modData['Tree']['children']
-        print isinstance(modData['Timetable'],str)
-        if not isinstance(modData['Timetable'],str): ## is not "Not Applicable.":
-            for lesson in modData['Timetable'][currentSem]:
+        if isinstance(modData['Timetable'],dict):
+            for lesson in modData['Timetable'].get(currentSem,[]):
                 if lesson['LessonType'] == 'LABORATORY':
                     newlesson = Laboratory(lesson['ClassNo'],modcode,Period(0,stime=lesson['StartTime'],etime=lesson['EndTime'],day=dayToInt[lesson['DayText']]))
                 else:
