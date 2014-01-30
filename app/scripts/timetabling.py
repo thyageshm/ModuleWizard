@@ -1,5 +1,6 @@
 import json, copy
 from time import clock
+import abc
 ##Start of class hierarchy
 
 currentSem = 'Sem2'
@@ -331,7 +332,8 @@ class Lesson(object):
 
         assert isinstance(lesson, Lesson)
 
-        self.alternatives.append(lesson)
+        if lesson not in self.alternatives:
+            self.alternatives.append(lesson)
 
     def addAlternatives(self, lessons):
         """
@@ -356,6 +358,11 @@ class Lesson(object):
 
     def getModuleCode(self):
         return self.moduleCode
+
+    @abc.abstractmethod
+    def getLessonType(self):
+        """ Return string form of the lesson type """
+        return
 
     def getGroup(self):
         return self.group
@@ -416,6 +423,9 @@ class Lecture(Lesson):
         else:
             Lesson.__init__(self, module, group)
 
+    def getLessonType(self):
+        return "Lecture"
+
 
 class Tutorial(Lesson):
     """
@@ -428,6 +438,9 @@ class Tutorial(Lesson):
         else:
             Lesson.__init__(self, module, group)
 
+    def getLessonType(self):
+        return "Tutorial"
+
 
 class Laboratory(Lesson):
     """
@@ -439,6 +452,9 @@ class Laboratory(Lesson):
             Lesson.__init__(self, module, group, list(periods))
         else:
             Lesson.__init__(self, module, group)
+
+    def getLessonType(self):
+        return "Laboratory"
 
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
@@ -456,6 +472,8 @@ class Module(object):
         Add all associated lessons and then call setBaseParams() to set the lesson related count values
     """
 
+    LESSON_TYPES = ["Lecture", "Tutorial", "Laboratory"]
+
     def __init__(self, code, examDate, dept):
         """
             @param code: refers to the module code in string
@@ -469,69 +487,91 @@ class Module(object):
             raise TypeError("Given code is not of type string!")
 
         # Create the member variables to hold module's info
-        self.lessons = {"Lecture": [], "Tutorial": [], "Laboratory": []}    # The dict that holds the lessons
-        self.code = code                                                    # The module code
-        self.examDate = examDate                                            # The exam date
-        self.dept = dept                                                    # The department
-        self.actualLectureCount = -1                                                  # The num of lectures in the module
-        self.actualTutorialCount = -1
-        self.actualLabCount = -1
+        self.lessons = {lessonType: [] for lessonType in self.LESSON_TYPES}  # The dict that holds the lessons
+        self.code = code                                                     # The module code
+        self.examDate = examDate                                             # The exam date
+        self.dept = dept                                                     # The department
+        self.actualLectureCount = 0                                          # The num of lectures in the module
+        self.actualTutorialCount = 0                                         # The num of tutorials in the module
+        self.actualLabCount = 0                                              # The num of laboratories in the module
 
     def addLesson(self, lesson):
-        if not issubclass(type(lesson), Lesson):
-            raise TypeError("Given parameter is not a lesson")
-
-        if self.code != lesson.getModuleCode():
-            raise TypeError("Given Lesson does not belong to this Module")
+        """
+        @param lesson: The lesson to add to current Module
+        @return: None
+        """
+        assert issubclass(type(lesson), Lesson)
+        assert self.code == lesson.getModuleCode()
 
         ## check if this is a second period to an existing lesson
         if self.hasLesson(lesson=lesson):
             internalLesson = self.getLesson(lesson.getId())
             internalLesson.mergeWithLesson(lesson)
         elif not self.hasAlternativeLesson(lesson):
-            self.lessons[lesson.getId().split("_")[1]].append(lesson)
+            self.lessons[lesson.getLessonType()].append(lesson)
 
     def removeLesson(self, lesson):
-        if not issubclass(type(lesson), Lesson):
-            raise TypeError("Given parameter is not a lesson")
+        """
+        @param lesson: Lesson to be removed from this module
+        @return:
+        """
 
-        if self.code != lesson.getModuleCode():
-            raise TypeError("Given Lesson does not belong to this Module")
+        assert issubclass(type(lesson), Lesson)
+        assert self.code != lesson.getModuleCode()
 
-        self.lessons[type(lesson).__name__].remove(lesson)
+        self.lessons[lesson.getLessonType()].remove(lesson)
 
     def removeAllBut(self, lessonType, group):
-        ##print(group)
-        ##print([lesson.getGroup() for lesson in self.lessons[lessonType]])
-        self.lessons[lessonType] = []
+        """
+        @param lessonType: The lessonType to clear except for given Lesson group
+        @param group: The group to keep as the compulsory Lesson
+        @return: None
+        """
+
+        assert lessonType in self.LESSON_TYPES
+
         for lesson in self.lessons[lessonType]:
-            if group in [lesson.getGroup()] + [tempLesson.getGroup()
-                                               for tempLesson in lesson.getAlternatives()]:
-                self.lessons[lessonType].append(lesson)
+            if group in [lesson.getGroup()] + [tempLesson.getGroup() for tempLesson in lesson.getAlternatives()]:
+                self.lessons[lessonType] = [lesson]
+                break
+
+        raise AssertionError("Given lesson group does not exist")
 
     def hasAlternativeLesson(self, lesson):
+        """
+        @param lesson: Checks if a given lesson is an alternative to existing lesson. If so, adds it as an alternative
+        @return: Boolean value that tells if given lesson is an alternative or not
+        """
+
         for self_lesson in self.__iter__(type(lesson)):
             if self_lesson != lesson and self_lesson.isAlternative(lesson):
                 self_lesson.addAlternative(lesson)
                 return True
         return False
 
-    def hasLesson(self, **lessonData):
-        try:
-            if issubclass(type(lessonData['lesson']), Lesson):
-                lesson = lessonData['lesson']
-                return any(lesson == self_lesson for self_lesson in self.lessons[lesson.getId().split("_")[1]])
-            else:
-                raise TypeError("Given parameter is not a valid lesson")
-        except KeyError:
-            try:
-                if lessonData['lessonid'] is not None:
-                    lessonid = lessonData['lessonid']
-                    return any(lessonid == self_lesson.getId() for self_lesson in self.lessons[lessonid.split("_")[1]])
-                else:
-                    raise TypeError("Given 'None' as lesson id")
-            except KeyError:
-                raise KeyError("No lesson data provided")
+    def isValidLessonId(lessonId):
+        """
+        @param lessonId: Lesson Id to validate
+        @return: Boolean value to represent success of validation
+        """
+
+        assert isinstance(lessonId, str)
+
+        idSegments = lessonId.split('_')
+        return len(idSegments) == 3 and all(segment != "" for segment in idSegments)
+
+    def getLessonTypeFromId(self, lessonId):
+        return lessonId.split("_")[1]
+
+    def hasLesson(self, lesson):
+        assert issubclass(type(lesson), Lesson)
+
+        return any(lesson == self_lesson for self_lesson in self.lessons[lesson.getId().split("_")[1]])
+
+    def hasLessonWithId(self, lessonId):
+        assert self.isValidLessonId(lessonId)
+
+        return any(lessonId == self_lesson.getId() for self_lesson in self.getLessonsOfType(self.getLessonTypeFromId(lessonId)))
 
     def getChoices(self, setc):
         for lec in (self.__iter__(Lecture, setc) if self.actualLectureCount > 0 else [Lecture("Test", "Test")]):
@@ -615,6 +655,11 @@ class Module(object):
     def getCurrentLabCount(self):
         return len(self.lessons["Laboratory"])
 
+    def getLessonsOfType(self, lessonType):
+        assert lessonType in self.LESSON_TYPES
+
+        return self.lessons[lessonType]
+
     def getCompulsoryLessons(self):
         if self.getActualLectureCount() is -1:
             self.setBaseparams()
@@ -644,16 +689,17 @@ class Module(object):
     def __ge__(self, other):
         return self.getCode() >= other.getCode()
 
-    def __iter__(self, FilterType=object, ExcludeList=set()):
-        if FilterType != object:
-            for lesson in self.lessons[FilterType.__name__]:
-                if lesson.getId() not in ExcludeList:
+    def __iter__(self, lessonTypeFilter = "", excludeList=set()):
+        if lessonTypeFilter != "":
+            for lesson in self.lessons[lessonTypeFilter]:
+                if lesson.getId() not in excludeList:
                     yield lesson
         else:
-            for ltype in self.lessons:
+            for ltype in self.lessons.keys():
                 for lesson in self.lessons[ltype]:
-                    if lesson.getId() not in ExcludeList:
-                        yield lesson;
+                    if lesson.getId() not in excludeList:
+                        yield lesson
+
 
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
