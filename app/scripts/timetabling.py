@@ -1,15 +1,16 @@
 import json, copy
 from time import clock
 import abc
+
 ##Start of class hierarchy
 
 currentSem = 'Sem2'
-
 
 class TimeSlot(object):
     """
         This class represents each half an hour slot in the timetable in a week
         It holds values of the day and the start time of the slot
+        @author: Thyagesh Manikandan
     """
 
     def __init__(self, day, time):
@@ -75,6 +76,7 @@ class Period(object):
     """
         This class holds a list of continuous timeslots to make a "period"
         This forms the time aspect of a lecture/tutorial/laboratory
+        @author: Thyagesh Manikandan
     """
     DEFAULT_DAY_OR_TIME_VALUE = 0
     STRING_EVERY_WEEK = "EVERY WEEK"
@@ -262,6 +264,7 @@ class Lesson(object):
         Additional info such as the module that the lesson belongs to and group number are saved as well
         For the sake of the algorithm in this file, alternatives is a list of lessons of the same type (eg lecture) that
             contain the same set of periods to define them
+        @author: Thyagesh Manikandan
     """
 
     def __init__(self, moduleCode, group, periods=[]):
@@ -416,6 +419,7 @@ class Lecture(Lesson):
     """
         This class represents a Lecture as a lesson type
         It inherits from Lesson and is only used for type checking
+        @author: Thyagesh Manikandan
     """
     def __init__(self, module, group, *periods):
         if len(periods) > 0:
@@ -431,6 +435,7 @@ class Tutorial(Lesson):
     """
         This class represents a Tutorial as a lesson type
         It inherits from Lesson and is only used for type checking
+        @author: Thyagesh Manikandan
     """
     def __init__(self, module, group, *periods):
         if len(periods) > 0:
@@ -446,6 +451,7 @@ class Laboratory(Lesson):
     """
         This class represents a Laboratory as a lesson type
         It inherits from Lesson and is only used for type checking
+        @author: Thyagesh Manikandan
     """
     def __init__(self, module, group, *periods):
         if len(periods) > 0:
@@ -470,6 +476,7 @@ class Module(object):
         Stores all other attributes like module code and exam date as member variables
 
         Add all associated lessons and then call setBaseParams() to set the lesson related count values
+        @author: Thyagesh Manikandan
     """
 
     LESSON_TYPES = ["Lecture", "Tutorial", "Laboratory"]
@@ -738,6 +745,7 @@ class Module(object):
 class ModuleSet(object):
     """
         This class is used a convenient container for a group of Module objects
+        @author: Thyagesh Manikandan
     """
     def __init__(self):
         self.modules = []
