@@ -500,6 +500,7 @@ class Module(object):
         @param lesson: The lesson to add to current Module
         @return: None
         """
+
         assert issubclass(type(lesson), Lesson)
         assert self.code == lesson.getModuleCode()
 
@@ -507,6 +508,7 @@ class Module(object):
         if self.hasLesson(lesson=lesson):
             internalLesson = self.getLesson(lesson.getId())
             internalLesson.mergeWithLesson(lesson)
+            self.hasAlternativeLesson(internalLesson)
         elif not self.hasAlternativeLesson(lesson):
             self.lessons[lesson.getLessonType()].append(lesson)
 
@@ -573,37 +575,59 @@ class Module(object):
 
         return any(lessonId == self_lesson.getId() for self_lesson in self.getLessonsOfType(self.getLessonTypeFromId(lessonId)))
 
-    def getOccupyingLesson(self, timeslot):
-        if type(timeslot) != TimeSlot:
-            raise TypeError("Given parameter is not of type TimeSlot")
+    def getLessonsOccupyingTimeSlot(self, timeslot):
+        """
+        @param timeslot: The TimeSlot object used to get lessons that contain it
+        @return: yields the lessons that contain the TimeSlot given
+        """
+
+        assert isinstance(timeslot, TimeSlot)
 
         for lesson in self:
             if lesson.hasSlot(timeslot):
                 yield lesson
 
     def getClashingLessons(self, otherLesson):
+        """
+        @param otherLesson: The Lesson object to be check for overlap
+        @return:
+        """
+
+        assert issubclass(type(otherLesson), Lesson)
+
         conflictSet = set()
         for period in otherLesson:
             for timeslot in period:
-                for otherLesson in self.getOccupyingLesson(timeslot):
+                for otherLesson in self.getLessonsOccupyingTimeSlot(timeslot):
                     conflictSet.add(otherLesson.getId())
+
+        ## A separate for loop to avoid repetitions in lessons
         for otherLesson in self:
             if otherLesson.getId() in conflictSet:
                 yield otherLesson
 
-    def getLesson(self, Lid):
+    def getLesson(self, lessonId):
         ## only check in the list of lessons that are of the same type (Lec/Tut/Lab)
-        for lesson in self.lessons[Lid.split("_")[1]]:
-            if lesson.getId() == Lid:
+        for lesson in self.lessons[self.getLessonTypeFromId(lessonId)]:
+            if lesson.getId() == lessonId:
                 return lesson
+
+        raise AssertionError("Unable to find Lesson of given Id")
 
     def getDepartment(self):
         return self.dept
 
-    def getNumChoices(self):
-        return (1 if 0 == self.getActualLectureCount() else self.getCurrentLectureCount()) * (
-            1 if 0 == self.getActualTutorialCount() else self.getCurrentTutorialCount()) * (
-                   1 if 0 == self.getActualLabCount() else self.getCurrentLabCount())
+    def getPossibleLessonsChoiceCount(self):
+        """
+        'Possible Lessons Choice' refers a choice of one lecture, tutorial and lab where applicable
+        @return: number of such choices
+        """
+
+        lectureCount = 1 if 0 == self.getActualLectureCount() else self.getCurrentLectureCount()
+        tutorialCount = 1 if 0 == self.getActualTutorialCount() else self.getCurrentTutorialCount()
+        labCount = 1 if 0 == self.getActualLabCount() else self.getCurrentLabCount()
+
+        return lectureCount * tutorialCount * labCount
 
     def getCode(self):
         return self.code
@@ -611,9 +635,15 @@ class Module(object):
     def getExamDate(self):
         return self.examDate
 
-    ## this function is used to set the count of lessons in the actual module as,
-    ## to optimise we would be removing some of the lessons prematurely
     def setBaseparams(self):
+        """
+        This method is used to set the count of lessons in the actual module as,
+        to optimise we would be removing some of the lessons prematurely
+
+        @return: None
+        """
+
+        # * delete for loop later *
         for lesson in self:
             if self.hasAlternativeLesson(lesson):
                 self.removeLesson(lesson)
@@ -637,7 +667,7 @@ class Module(object):
     def getTutorials(self):
         return self.lessons["Tutorial"]
 
-    def getLabs(self):
+    def getLaboratories(self):
         return self.lessons["Laboratory"]
 
     def getCurrentTutorialCount(self):
@@ -655,15 +685,19 @@ class Module(object):
         return self.lessons[lessonType]
 
     def getCompulsoryLessons(self):
+        """
+        Yields all the compulsory lessons in the module, determined by a lack of other lessons in the respective lists
+        @return: yields the lessons
+        """
         if self.getActualLectureCount() is -1:
             self.setBaseparams()
 
         if (self.getActualLectureCount() == 1 and self.getCurrentLectureCount() > 0) or self.getCurrentLectureCount() == 1:
-            yield self.lessons["Lecture"][0]
+            yield self.getLectures()[0]
         if (self.getActualTutorialCount() == 1 and self.getCurrentTutorialCount() > 0) or self.getCurrentTutorialCount() == 1:
-            yield self.lessons["Tutorial"][0]
+            yield self.getTutorials()[0]
         if (self.getActualTutorialCount() == 1 and self.getCurrentLabCount() > 0) or self.getCurrentLabCount() == 1:
-            yield self.lessons["Laboratory"][0]
+            yield self.getLaboratories()[0]
 
     def __eq__(self, other):
         return self.getCode() == other.getCode()
@@ -702,35 +736,35 @@ class Module(object):
 
 
 class ModuleSet(object):
-
-##    Created = False
+    """
+        This class is used a convenient container for a group of Module objects
+    """
     def __init__(self):
-    ##        if ModuleSet.Created:
-    ##           raise RuntimeError("A moduleset has already been created")
         self.modules = []
-        self.count = 0
+        self.moduleCount = 0
 
     def addModule(self, module):
-        if not type(module) == Module:
-            raise TypeError("The given parameter is not of type Module")
+        assert isinstance(module, Module)
 
         module.setBaseparams()
         self.modules.append(module)
-        self.count += 1
+        self.moduleCount += 1
 
     def removeModule(self, code):
+        assert isinstance(code, str)
+
         module = self.getModule(code)
         if module:
             self.modules.remove(module)
-            self.count -= 1
+            self.moduleCount -= 1
 
     def getModuleCount(self):
-        return self.count
+        return self.moduleCount
 
     def getModule(self, code):
         for module in self:
             if module.getCode() == code:
-                return module;
+                return module
 
     def __iter__(self):
         for module in self.modules:
@@ -855,13 +889,13 @@ def generatePossibleModules(modInfoDict, masterModset):
                     for lessonToDelete in lessonList:
                         mod_del.removeLesson(lessonToDelete)
         for tempMod in modList:
-            if tempMod.getNumChoices() == 0:
+            if tempMod.getPossibleLessonsChoiceCount == 0:
                 print(tempMod.getCode())
                 print("Pre allocated Modules cannot be taken together!!")
 
     possibleMods = []
     for mod in masterModset:
-        if (mod not in modList) and mod.getNumChoices() != 0:
+        if (mod not in modList) and mod.getPossibleLessonsChoiceCount != 0:
             possibleMods.append(mod.getCode())
 
     return possibleMods, modList
@@ -891,7 +925,7 @@ def removeConflicts(mainModCodeList, masterModSet):
                         lessonList.append(lesson)
                 for lesson in lessonList:
                     mod.removeLesson(lesson)
-                if mod.getNumChoices() == 0:
+                if mod.getPossibleLessonsChoiceCount == 0:
                     tempModSet.addModule(mod)
             else:
                 tempModSet.addModule(mod)
