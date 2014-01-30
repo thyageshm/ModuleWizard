@@ -6,6 +6,10 @@ currentSem = 'Sem2'
 
 
 class TimeSlot(object):
+    """
+        This class represents each half an hour slot in the timetable in a week
+        It holds values of the day and the start time of the slot
+    """
     def __init__(self, day, time):
         self.day = day
         self.time = time
@@ -36,8 +40,21 @@ class TimeSlot(object):
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
+
+
 class Period(object):
+    """
+        This class holds a list of continuous timeslots to make a "period"
+        This forms the time aspect of a lecture/tutorial/laboratory
+    """
     def __init__(self, weeks, *timeslots, **StartEndTimes):
+        """
+
+        @param weeks: specifies the recurrence of the lesson ("ALL WEEKS", "ODD WEEKS", "EVEN WEEKS")
+        @param timeslots: A list of TimeSlot objects that forms this period
+        @param StartEndTimes:
+        @return:
+        """
 
         ## StartEndTimes takes stime and etime as 24hr str times and converts them respective timeslots
         ## timeslots takes in a list of timeslots to directly add to the attribute
@@ -201,10 +218,11 @@ class Lesson(object):
     def __ge__(self, other):
         return self.getId() >= other.getId()
 
-##-----------------------------------------------------------------------------------------------------------------------
-##-----------------------------------------------------------------------------------------------------------------------
-##-----------------------------------------------------------------------------------------------------------------------
-##-----------------------------------------------------------------------------------------------------------------------
+##----------------------------------------------------------------------------------------------------------------------
+##----------------------------------------------------------------------------------------------------------------------
+##----------------------------------------------------------------------------------------------------------------------
+##----------------------------------------------------------------------------------------------------------------------
+
 
 class Lecture(Lesson):
     def __init__(self, group, module, *periods):
@@ -234,16 +252,34 @@ class Laboratory(Lesson):
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
 
+
 class Module(object):
+    """
+        This class models a module which contains different lessons in it.
+        The lessons are kept in list within a bigger dict with keys as lesson type ("Lecture","Tutorial","Laboratory")
+
+        Stores all other attributes like module code and exam date as member variables
+
+        Add all associated lessons and then call setBaseParams() to set the lesson related count values
+    """
     def __init__(self, code, examDate, dept):
+        """
+            @param code: refers to the module code in string
+            @param examDate: the examDate in string ("DD/MM/YYYY hh:mm AM/PM")
+            @param dept: refers to the department the module belongs to, in string
+            @return: creates a module object with given params
+        """
+
+        # Test if given code is valid
         if not isinstance(code, str):
             raise TypeError("Given code is not of type string!")
 
-        self.lessons = {"Lecture": [], "Tutorial": [], "Laboratory": []}
-        self.code = code
-        self.examDate = examDate
-        self.dept = dept
-        self.leccount = -1
+        # Create the member variables to hold module's info
+        self.lessons = {"Lecture": [], "Tutorial": [], "Laboratory": []}    # The dict that holds the lessons
+        self.code = code                                                    # The module code
+        self.examDate = examDate                                            # The exam date
+        self.dept = dept                                                    # The department
+        self.leccount = -1                                                  # The num of lectures in the module
         self.tutcount = -1
         self.labcount = -1
 
@@ -652,7 +688,7 @@ def createTimeBasedModules(timeRestraints):
     for restraint in timeRestraints:
         mod = Module("TimeRestrainModule " + str(i), "Not Available.", "COMPUTING & ENGINEERING")
         stime = restraint["StartTime"]
-        while stime < restraint["EndTime"]:
+        while (stime + restraint["TimeNeeded"]) <= restraint["EndTime"]:
             tempPeriod = Period("ALL WEEKS", day=dayToInt[restraint["Day"]], stime=stime,
                                 etime=(stime + restraint["TimeNeeded"]))
             tempLesson = Lecture(stime, "TimeRestrainModule " + str(i), tempPeriod)
@@ -668,6 +704,7 @@ def getClashingModuleCount(allModuleSet, clashingModuleSet):
     for clashingMod in clashingModuleSet:
         clashingModuleCount[clashingMod.getCode()] = 0
         for clashingLesson in clashingMod:
+            print clashingLesson.getId()
             for mod in allModuleSet:
                 for lesson in mod.getClashingLessons(clashingLesson):
                     clashingModuleCount[clashingMod.getCode()] += 1
@@ -675,34 +712,34 @@ def getClashingModuleCount(allModuleSet, clashingModuleSet):
 
     return clashingModuleCount
 
+def saveGeneratedListToFile(modList):
+    fileN = open("test.txt", 'w')
+    for mod in modList:
+        fileN.write(mod + '\n')
+    fileN.close()
 
-# loadedData, deptToFac, preReqData = loadAllModData()
-# modData = copy.deepcopy(loadedData)
 
-# print("starting now...")
+loadedData, deptToFac, preReqData = loadAllModData()
+print "done loading... deep copying..."
+modData = copy.deepcopy(loadedData)
+print "Num of mods: "+str(modData.getModuleCount())
+
+
+print("starting now...")
 # modList, testMods = generatePossibleModules(modCodeList, loadedData)
-#
-# for mod in testMods:
-#     for l in mod.getCompulsoryLessons():
-#         print(l)
-# fileN = open("test.txt", 'w')
-# for mod in modList:
-#     fileN.write(mod + '\n')
-# fileN.close()
+# saveGeneratedListToFile(modList)
+
 # mod = checkModuleAdding("YLS1201", 0)
 # mod.setBaseparams()
-
-# timeRestrictionPairs = [(2, 800), (2, 900)]
-# timeRestrictions = []
-# for day, time in timeRestrictionPairs:
-#     timeRestrictions.append(TimeSlot(day, time))
 
 timeRestrictionsFile = open("../data/timeRestrictionsTestData.json")
 timeRestrictions = json.load(timeRestrictionsFile)
 
-# timeRestrictions = [{"Day": "MONDAY", "StartTime": 1200, "EndTime": 1400, "TimeNeeded": 30}]
+## timeRestrictions = [{"Day": "MONDAY", "StartTime": 1200, "EndTime": 1400, "TimeNeeded": 30}]
 
 testModSet = createTimeBasedModules(timeRestrictions)
+clashingDict = getClashingModuleCount(modData, testModSet)
+print clashingDict
 # for mod in testModSet:
     # for lesson in mod:
     #     for p in lesson:
