@@ -573,12 +573,6 @@ class Module(object):
 
         return any(lessonId == self_lesson.getId() for self_lesson in self.getLessonsOfType(self.getLessonTypeFromId(lessonId)))
 
-    def getChoices(self, setc):
-        for lec in (self.__iter__(Lecture, setc) if self.actualLectureCount > 0 else [Lecture("Test", "Test")]):
-            for tut in (self.__iter__(Tutorial, setc) if self.actualTutorialCount > 0 else [Tutorial("Test", "Test")]):
-                for lab in (self.__iter__(Laboratory, setc) if self.actualLabCount > 0 else [Laboratory("Test", "Test")]):
-                    yield {lec.getId(), tut.getId(), lab.getId()}
-
     def getOccupyingLesson(self, timeslot):
         if type(timeslot) != TimeSlot:
             raise TypeError("Given parameter is not of type TimeSlot")
