@@ -10,9 +10,16 @@ class TimeSlot(object):
         This class represents each half an hour slot in the timetable in a week
         It holds values of the day and the start time of the slot
     """
+
     def __init__(self, day, time):
         self.day = day
         self.time = time
+
+    def getDay(self):
+        return self.day
+
+    def getTime(self):
+        return self.time
 
     def __str__(self):
         message = "Day: " + str(self.day) + ","
@@ -27,14 +34,35 @@ class TimeSlot(object):
 
         return self.day if key == 0 else self.time
 
-    def getDay(self):
-        return self.day
+    def __eq__(self, otherTimeslot):
+        assert isinstance(otherTimeslot, TimeSlot)
 
-    def getTime(self):
-        return self.time
+        return self.day == otherTimeslot.day and self.time == otherTimeslot.time
 
-    def __eq__(self, timeslot):
-        return self.day == timeslot.day and self.time == timeslot.time
+    def __lt__(self, otherTimeslot):
+        assert isinstance(otherTimeslot, TimeSlot)
+
+        if self.getDay() > otherTimeslot.getDay():
+            return False
+        elif self.getDay() == otherTimeslot.getDay():
+            if self.getTime() >= otherTimeslot.getTime():
+                return False
+        return True
+
+    def __le__(self, otherTimeslot):
+        assert isinstance(otherTimeslot, TimeSlot)
+
+        return self == otherTimeslot or self < otherTimeslot
+
+    def __gt__(self, otherTimeslot):
+        assert isinstance(otherTimeslot, TimeSlot)
+
+        return not (self == otherTimeslot or self < otherTimeslot)
+
+    def __ge__(self, otherTimeslot):
+        assert isinstance(otherTimeslot, TimeSlot)
+
+        return not (self < otherTimeslot)
 
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
@@ -47,73 +75,131 @@ class Period(object):
         This class holds a list of continuous timeslots to make a "period"
         This forms the time aspect of a lecture/tutorial/laboratory
     """
-    def __init__(self, weeks, *timeslots, **StartEndTimes):
-        """
+    DEFAULT_DAY_OR_TIME_VALUE = 0
+    STRING_EVERY_WEEK = "EVERY WEEK"
+    STRING_ODD_WEEK = "ODD WEEKS"
+    STRING_EVEN_WEEK = "EVEN WEEKS"
 
+    def __init__(self, weeks, day=DEFAULT_DAY_OR_TIME_VALUE, stime=DEFAULT_DAY_OR_TIME_VALUE,
+                 etime=DEFAULT_DAY_OR_TIME_VALUE, timeslots=[]):
+        """
         @param weeks: specifies the recurrence of the lesson ("ALL WEEKS", "ODD WEEKS", "EVEN WEEKS")
+        @param day: An integer to represent the day of the week starting with 1 for Monday
+        @param stime: An int representation for the start time in the 24 hr time (eg 800 for 0800 and 2300 for 2300)
+        @param etime: An int representation for the end time in the 24 hr time (eg 800 for 0800 and 2300 for 2300)
         @param timeslots: A list of TimeSlot objects that forms this period
-        @param StartEndTimes:
-        @return:
+        @return: creates a period object
         """
 
-        ## StartEndTimes takes stime and etime as 24hr str times and converts them respective timeslots
-        ## timeslots takes in a list of timeslots to directly add to the attribute
-
+        ## Type checking
         if not all(type(timeslot) == TimeSlot for timeslot in timeslots):
             raise TypeError("One or more of the given parameters is not of type TimeSlot")
 
+        if not (type(day) == int and type(stime) == int and type(etime) == int):
+            raise TypeError("One of the parameters given is not an integer")
+
+        ## Initialise member variables
         self.timeslots = []
+        self.weeks = weeks
 
-        if len(StartEndTimes) > 0:
-
-            stime, etime, day = int(StartEndTimes['stime']), int(StartEndTimes['etime']), StartEndTimes['day']
-
+        ## populate the timeslots based on start time and end time  
+        if day is not self.DEFAULT_DAY_OR_TIME_VALUE:
             if etime == 0:
                 etime = 2400
 
             while stime < etime:
                 self.timeslots.append(TimeSlot(day, stime))
                 stime += 30 if stime % 100 == 0 else 70
+                ## populate the timeslots based on list of timeslots given
+        if len(timeslots) > 0:
+            self.timeslots += timeslots
 
-        if (len(timeslots) > 0):
-            self.timeslots += list(timeslots)
+    def addTimeSlot(self, timeslot):
+        """
+        @param timeslot:
+        @return: None
+        """
+        assert isinstance(timeslot, TimeSlot)
 
-        self.weeks = weeks
+        self.timeslots.append(timeslot)
 
-    def addTimeSlot(self, *sources):
-        if not all((type(source) == TimeSlot or type(source) == Period) for source in sources):
-            raise TypeError("One of the parameters was not an acceptable source for periods (eg Periods, TimeSlots)")
+    def addTimeslots(self, timeslots):
+        """
+        @param timeslots: An iterable container of TimeSlot objects to be added to current Period
+        @return: None
+        """
+        assert all(isinstance(timeslot, TimeSlot) for timeslot in timeslots)
 
-        for source in sources:
-            if type(source) == TimeSlot:
-                self.periods.append(source)
-            elif type(source) == Period:
-                for timeslot in source:
-                    self.periods.append(timeslot)
+        for timeslot in timeslots:
+            self.addTimeSlot(timeslot)
 
-    def hasSlot(self, timeslot):
-        if type(timeslot) != TimeSlot:
-            raise TypeError("Given parameter is not of type TimeSlot")
+    def addPeriods(self, periods):
+        """
+        @param periods: An iterable container of Period objects whose TimeSlots are to be added to current period
+        @return: None
+        """
 
-        return any(t == timeslot for t in self.timeslots)
+        assert all(isinstance(period, Period) for period in periods)
+        for period in periods:
+            self.addPeriod(period)
 
-    def DoClash(self, anotherPeriod):
-        if not type(anotherPeriod) == Period:
-            raise TypeError("Given parameter is not a Period!")
+    def addPeriod(self, period):
+        """
+        @param period: A Period object whose TimeSlots are to be added to this period object
+        @return:
+        """
+
+        assert isinstance(period, Period)
+
+        for timeslot in period:
+            self.addTimeSlot(timeslot)
+
+    def hasSlot(self, needleTimeslot):
+        """
+        @param needleTimeslot: The TimeSlot object to search for in this period
+        @return: Boolean value to signify if the TimeSlot was found or not
+        """
+
+        assert isinstance(needleTimeslot, TimeSlot)
+
+        return any(timeslot == needleTimeslot for timeslot in self.timeslots)
+
+    def doesClash(self, anotherPeriod):
+        """
+        @param anotherPeriod: The period to check for overlap
+        @return:
+        """
+
+        assert isinstance(anotherPeriod, Period)
 
         #compare the days and the odd/even week setting
-        if not (self.timeslots[0][0] == anotherPeriod.timeslots[0][0] and self.weeks == anotherPeriod.weeks):
+        hasSameDay = self.timeslots[0].getDay() == anotherPeriod.timeslots[0].getDay()
+
+        hasOverlapingWeekSetting = (self.weeks == self.STRING_EVERY_WEEK) or (anotherPeriod.weeks == \
+            self.STRING_EVERY_WEEK) or (self.weeks == anotherPeriod.weeks)
+
+        if not (hasSameDay and hasOverlapingWeekSetting):
             return False
+
         else:
-            # check if either the start or the end of one of the periods is between the start and the end of the other
-            return (anotherPeriod.timeslots[0][1] <= self.timeslots[0][1] <= anotherPeriod.timeslots[-1][1]) or (
-                anotherPeriod.timeslots[0][1] <= self.timeslots[-1][1] <= anotherPeriod.timeslots[-1][1])
+            isStartOfThisPeriodInPeriod = anotherPeriod.getStart().getTime() <= self.getStart().getTime()\
+                <= anotherPeriod.getEnd().getTime()
+            isEndOfThisPeriodInPeriod = anotherPeriod.getStart().getTime() <= self.getEnd().getTime() \
+                <= anotherPeriod.getEnd().getTime()
+
+            return isStartOfThisPeriodInPeriod or isEndOfThisPeriodInPeriod
 
     def getStart(self):
-        return self.timeslots[0];
+        """
+        @return: Starting TimeSlot object of self
+        """
+        return self.timeslots[0]
 
     def getEnd(self):
-        return self.timeslots[-1];
+        """
+        @return: Ending TimeSlot object of self
+        """
+        return self.timeslots[-1]
 
     def __str__(self):
         message = ""
@@ -123,10 +209,42 @@ class Period(object):
 
         return message
 
-    def __eq__(self, period):
-        return self.getStart() == period.getStart() and self.getEnd() == period.getEnd()
+    def __eq__(self, otherPeriod):
+        assert isinstance(otherPeriod, Period)
+
+        return self.getStart() == otherPeriod.getStart() and self.getEnd() == otherPeriod.getEnd()
+
+    def __lt__(self, otherPeriod):
+        assert isinstance(otherPeriod, Period)
+
+        if self.getStart() > otherPeriod.getStart():
+            return False
+        elif self.getStart() == otherPeriod.getStart():
+            if self.getEnd() >= otherPeriod.getEnd():
+                return False
+
+        return True
+
+    def __le__(self, otherPeriod):
+        assert isinstance(otherPeriod, Period)
+
+        return self == otherPeriod or self < otherPeriod
+
+    def __gt__(self, otherPeriod):
+        assert isinstance(otherPeriod, Period)
+
+        return not (self < otherPeriod or self == otherPeriod)
+
+    def __ge__(self, otherPeriod):
+        assert isinstance(otherPeriod, Period)
+
+        return not (self < otherPeriod)
 
     def __iter__(self):
+        """
+        @return: yields all the TimeSlot objects in this Period
+        """
+
         for timeslot in self.timeslots:
             yield timeslot
 
@@ -135,49 +253,124 @@ class Period(object):
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
 
-class Lesson(object):
-    def __init__(self, group, module, *periods):
-        if not all(type(period) == Period for period in periods):
-            raise TypeError("One or more of the parameters given is not of type Period")
 
-        self.periods = list(periods)
+class Lesson(object):
+    """
+        This class represents a single lesson in any module (eg Lecture, Tutorial, Laboratory)
+        It is represented as a list of periods that define when the lesson takes place
+        Additional info such as the module that the lesson belongs to and group number are saved as well
+        For the sake of the algorithm in this file, alternatives is a list of lessons of the same type (eg lecture) that
+            contain the same set of periods to define them
+    """
+
+    def __init__(self, moduleCode, group, periods=[]):
+        """
+        @param moduleCode: The Module Code of the module that the lesson belongs to
+        @param group: The specific group number of the lesson
+        @param periods: The list of periods that define the lesson
+        @return: None
+        """
+
+        assert all(isinstance(period, Period) for period in periods)
+        assert isinstance(moduleCode, str)
+        assert isinstance(group, str)
+
+        self.periods = periods
         self.group = str(group)
-        self.module = str(module)
+        self.moduleCode = moduleCode
         self.alternatives = []
 
-    def addPeriod(self, *sources):
-        if not all((type(source) == Period or issubclass(type(source), Lesson)) for source in sources):
-            raise TypeError("One of the parameters was not an acceptable source for period group (eg Periods, Lessons)")
+    def addPeriod(self, period):
+        """
+        @param period: The Period object to add to the Lesson
+        @return:
+        """
 
-        for source in sources:
-            if type(source) == Period:
-                self.periods.append(source)
-            elif issubclass(type(source), Lesson):
-                for period in source:
-                    self.periods.append(period)
+        assert isinstance(period, Period)
 
-    def addAlternative(self, *alts):
-        if not all(type(alt) == type(self) for alt in alts):
-            raise TypeError("One or more of the given parameters is not of the same type as this lesson")
+        self.periods.append(period)
 
-        for alt in alts:
-            self.alternatives.append(alt)
+    def addPeriods(self, periods):
+        """
+        @param periods: An iterable container  of periods to add to the lesson
+        @return:
+        """
+
+        assert all(type(period) == Period for period in periods)
+
+        for period in periods:
+            self.addPeriod(period)
+
+    def mergeWithLesson(self, lesson):
+        """
+        @param lesson: A Lesson object to merge with
+        @return:
+        """
+
+        assert issubclass(type(lesson), Lesson)
+
+        for period in lesson:
+            self.addPeriod(period)
+
+    def mergeWithLessons(self, lessons):
+        """
+        @param lessons: An iterable container of Lesson objects to merge with
+        @return:
+        """
+
+        assert all(issubclass(type(lesson), Lesson) for lesson in lessons)
+
+        for lesson in lessons:
+            self.mergeWithLesson(lesson)
+
+    def addAlternative(self, lesson):
+        """
+        @param lesson: A Lesson object of same type as this Lesson object to add as an alternative
+        @return: None
+        """
+
+        assert isinstance(lesson, Lesson)
+
+        self.alternatives.append(lesson)
+
+    def addAlternatives(self, lessons):
+        """
+        @param lessons: An iterable container of lessons that are of the same type of this Lesson to add as alternatives
+        @return: None
+        """
+
+        assert all(type(lesson) == type(self) for lesson in lessons)
+
+        for lesson in lessons:
+            self.addAlternative(lesson)
 
     def hasSlot(self, timeslot):
-        if type(timeslot) != TimeSlot:
-            raise TypeError("Given parameter is not of type TimeSlot")
+        """
+        @param timeslot: The TimeSlot object that is tested for existence in this Lesson object
+        @return: Boolean to represent existence or otherwise
+        """
+
+        assert isinstance(timeslot, TimeSlot)
+
         return any(period.hasSlot(timeslot) for period in self.periods)
 
-    def getModule(self):
-        return self.module
+    def getModuleCode(self):
+        return self.moduleCode
 
     def getGroup(self):
         return self.group
 
     def getId(self):
-        return self.module + "_" + type(self).__name__ + "_" + self.group
+        """
+        @return: A unique Id to identify this lesson. Made of moduleCode, group and lesson type
+        """
+        return self.moduleCode + "_" + type(self).__name__ + "_" + self.group
 
     def getAlternatives(self):
+        """
+        @return: yields all lessons that are alternatives to self
+        """
+
         for lesson in self.alternatives:
             yield lesson
 
@@ -185,38 +378,26 @@ class Lesson(object):
         return len(self.alternatives)
 
     def isAlternative(self, lesson):
-        ##return set(self.periods) == set(lesson.periods)
+        """
+        @param lesson: The Lesson object that is tested to be an alternative to self Lesson object
+        @return: Boolean to represent whethe or not the given lesson is an alternative to self
+        """
+
+        # Both lessons need to have the same number of periods and same periods
         if len(self.periods) == len(lesson.periods):
             return all(selfp == lessonp for selfp, lessonp in zip(lesson, self))
         else:
             return False
 
-            ##   Special functions:
-
     def __str__(self):
         return "ID: " + self.getId()
 
     def __iter__(self):
-        for period in self.periods:
+        for period in sorted(self.periods):
             yield period
 
     def __eq__(self, other):
         return self.getId() == other.getId()
-
-    def __lt__(self, other):
-        return self.getId() < other.getId()
-
-    def __le__(self, other):
-        return self.getId() <= other.getId()
-
-    def __ne__(self, other):
-        return self.getId() != other.getId()
-
-    def __gt__(self, other):
-        return self.getId() > other.getId()
-
-    def __ge__(self, other):
-        return self.getId() >= other.getId()
 
 ##----------------------------------------------------------------------------------------------------------------------
 ##----------------------------------------------------------------------------------------------------------------------
@@ -225,27 +406,39 @@ class Lesson(object):
 
 
 class Lecture(Lesson):
-    def __init__(self, group, module, *periods):
+    """
+        This class represents a Lecture as a lesson type
+        It inherits from Lesson and is only used for type checking
+    """
+    def __init__(self, module, group, *periods):
         if len(periods) > 0:
-            Lesson.__init__(self, group, module, periods[0])
+            Lesson.__init__(self, module, module, list(periods))
         else:
-            Lesson.__init__(self, group, module)
+            Lesson.__init__(self, module, group)
 
 
 class Tutorial(Lesson):
-    def __init__(self, group, module, *periods):
+    """
+        This class represents a Tutorial as a lesson type
+        It inherits from Lesson and is only used for type checking
+    """
+    def __init__(self, module, group, *periods):
         if len(periods) > 0:
-            Lesson.__init__(self, group, module, periods[0])
+            Lesson.__init__(self, module, group, list(periods))
         else:
-            Lesson.__init__(self, group, module)
+            Lesson.__init__(self, module, group)
 
 
 class Laboratory(Lesson):
-    def __init__(self, group, module, *periods):
+    """
+        This class represents a Laboratory as a lesson type
+        It inherits from Lesson and is only used for type checking
+    """
+    def __init__(self, module, group, *periods):
         if len(periods) > 0:
-            Lesson.__init__(self, group, module, periods[0])
+            Lesson.__init__(self, module, group, list(periods))
         else:
-            Lesson.__init__(self, group, module)
+            Lesson.__init__(self, module, group)
 
 ##-----------------------------------------------------------------------------------------------------------------------
 ##-----------------------------------------------------------------------------------------------------------------------
@@ -262,6 +455,7 @@ class Module(object):
 
         Add all associated lessons and then call setBaseParams() to set the lesson related count values
     """
+
     def __init__(self, code, examDate, dept):
         """
             @param code: refers to the module code in string
@@ -279,21 +473,21 @@ class Module(object):
         self.code = code                                                    # The module code
         self.examDate = examDate                                            # The exam date
         self.dept = dept                                                    # The department
-        self.leccount = -1                                                  # The num of lectures in the module
-        self.tutcount = -1
-        self.labcount = -1
+        self.actualLectureCount = -1                                                  # The num of lectures in the module
+        self.actualTutorialCount = -1
+        self.actualLabCount = -1
 
     def addLesson(self, lesson):
         if not issubclass(type(lesson), Lesson):
             raise TypeError("Given parameter is not a lesson")
 
-        if self.code != lesson.getModule():
+        if self.code != lesson.getModuleCode():
             raise TypeError("Given Lesson does not belong to this Module")
 
         ## check if this is a second period to an existing lesson
         if self.hasLesson(lesson=lesson):
             internalLesson = self.getLesson(lesson.getId())
-            internalLesson.addPeriod(lesson)
+            internalLesson.mergeWithLesson(lesson)
         elif not self.hasAlternativeLesson(lesson):
             self.lessons[lesson.getId().split("_")[1]].append(lesson)
 
@@ -301,7 +495,7 @@ class Module(object):
         if not issubclass(type(lesson), Lesson):
             raise TypeError("Given parameter is not a lesson")
 
-        if self.code != lesson.getModule():
+        if self.code != lesson.getModuleCode():
             raise TypeError("Given Lesson does not belong to this Module")
 
         self.lessons[type(lesson).__name__].remove(lesson)
@@ -340,9 +534,9 @@ class Module(object):
                 raise KeyError("No lesson data provided")
 
     def getChoices(self, setc):
-        for lec in (self.__iter__(Lecture, setc) if self.leccount > 0 else [Lecture("Test", "Test")]):
-            for tut in (self.__iter__(Tutorial, setc) if self.tutcount > 0 else [Tutorial("Test", "Test")]):
-                for lab in (self.__iter__(Laboratory, setc) if self.labcount > 0 else [Laboratory("Test", "Test")]):
+        for lec in (self.__iter__(Lecture, setc) if self.actualLectureCount > 0 else [Lecture("Test", "Test")]):
+            for tut in (self.__iter__(Tutorial, setc) if self.actualTutorialCount > 0 else [Tutorial("Test", "Test")]):
+                for lab in (self.__iter__(Laboratory, setc) if self.actualLabCount > 0 else [Laboratory("Test", "Test")]):
                     yield {lec.getId(), tut.getId(), lab.getId()}
 
     def getOccupyingLesson(self, timeslot):
@@ -373,9 +567,9 @@ class Module(object):
         return self.dept
 
     def getNumChoices(self):
-        return (1 if 0 == self.leccount else len(self.lessons["Lecture"])) * (
-            1 if 0 == self.tutcount else len(self.lessons["Tutorial"])) * (
-                   1 if 0 == self.labcount else len(self.lessons["Laboratory"]))
+        return (1 if 0 == self.getActualLectureCount() else self.getCurrentLectureCount()) * (
+            1 if 0 == self.getActualTutorialCount() else self.getCurrentTutorialCount()) * (
+                   1 if 0 == self.getActualLabCount() else self.getCurrentLabCount())
 
     def getCode(self):
         return self.code
@@ -390,19 +584,46 @@ class Module(object):
             if self.hasAlternativeLesson(lesson):
                 self.removeLesson(lesson)
 
-        self.leccount = len(self.lessons["Lecture"])
-        self.tutcount = len(self.lessons["Tutorial"])
-        self.labcount = len(self.lessons["Laboratory"])
+        self.actualLectureCount = self.getCurrentLectureCount()
+        self.actualTutorialCount = self.getCurrentTutorialCount()
+        self.actualLabCount = self.getCurrentLabCount()
+
+    def getActualLectureCount(self):
+        return self.actualLectureCount
+
+    def getActualTutorialCount(self):
+        return self.actualTutorialCount
+
+    def getActualLabCount(self):
+        return self.actualLabCount
+
+    def getLectures(self):
+        return self.lessons["Lecture"]
+
+    def getTutorials(self):
+        return self.lessons["Tutorial"]
+
+    def getLabs(self):
+        return self.lessons["Laboratory"]
+
+    def getCurrentTutorialCount(self):
+        return len(self.lessons["Tutorial"])
+
+    def getCurrentLectureCount(self):
+        return len(self.lessons["Lecture"])
+
+    def getCurrentLabCount(self):
+        return len(self.lessons["Laboratory"])
 
     def getCompulsoryLessons(self):
-        if self.leccount is -1:
+        if self.getActualLectureCount() is -1:
             self.setBaseparams()
 
-        if (self.leccount == 1 and len(self.lessons["Lecture"]) > 0) or len(self.lessons["Lecture"]) == 1:
+        if (self.getActualLectureCount() == 1 and self.getCurrentLectureCount() > 0) or self.getCurrentLectureCount() == 1:
             yield self.lessons["Lecture"][0]
-        if (self.tutcount == 1 and len(self.lessons["Tutorial"]) > 0) or len(self.lessons["Tutorial"]) == 1:
+        if (self.getActualTutorialCount() == 1 and self.getCurrentTutorialCount() > 0) or self.getCurrentTutorialCount() == 1:
             yield self.lessons["Tutorial"][0]
-        if (self.tutcount == 1 and len(self.lessons["Laboratory"]) > 0) or len(self.lessons["Laboratory"]) == 1:
+        if (self.getActualTutorialCount() == 1 and self.getCurrentLabCount() > 0) or self.getCurrentLabCount() == 1:
             yield self.lessons["Laboratory"][0]
 
     def __eq__(self, other):
@@ -508,14 +729,14 @@ def checkModuleAdding(testCode, noTimetableModCount):
         try:
             for lesson in modData['Timetable']:
                 if lesson['LessonType'] == 'LABORATORY':
-                    newlesson = Laboratory(lesson['ClassNo'], modcode,
-                                           Period(0, stime=lesson['StartTime'], etime=lesson['EndTime'],
+                    newlesson = Laboratory(modcode, str(lesson['ClassNo']),
+                                           Period(0, stime=int(lesson['StartTime']), etime=int(lesson['EndTime']),
                                                   day=dayToInt[lesson['DayText']]))
                 else:
                     print(lesson['LessonType'])
-                    newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'], modcode,
-                                                                       Period(0, stime=lesson['StartTime'],
-                                                                              etime=lesson['EndTime'],
+                    newlesson = eval(LtypesJson[lesson['LessonType']])(modcode, str(lesson['ClassNo']),
+                                                                       Period(0, stime=int(lesson['StartTime']),
+                                                                              etime=int(lesson['EndTime']),
                                                                               day=dayToInt[lesson['DayText']]))
                 newmod.addLesson(newlesson)
         except KeyError:
@@ -562,15 +783,15 @@ def loadAllModData():
                     else:
                         for lesson in [lessons for lessons in modData['Timetable'][currentSem] if
                                        modData['Timetable'][currentSem] != "Not Available."]:
-                            newlesson = eval(LtypesJson[lesson['LessonType']])(lesson['ClassNo'], modcode,
-                                                                               Period(0, stime=lesson['StartTime'],
-                                                                                      etime=lesson['EndTime'],
+                            newlesson = eval(LtypesJson[lesson['LessonType']])(modcode, str(lesson['ClassNo']),
+                                                                               Period(0, stime=int(lesson['StartTime']),
+                                                                                      etime=int(lesson['EndTime']),
                                                                                       day=dayToInt[lesson['DayText']]))
                             newmod.addLesson(newlesson)
         except KeyError:
             pass
         modSet.addModule(newmod)
-    return (modSet, deptToFac, preReqData)
+    return modSet, deptToFac, preReqData
 
 
 def generatePossibleModules(modInfoDict, masterModset):
@@ -689,15 +910,16 @@ def createTimeBasedModules(timeRestraints):
         mod = Module("TimeRestrainModule " + str(i), "Not Available.", "COMPUTING & ENGINEERING")
         stime = restraint["StartTime"]
         while (stime + restraint["TimeNeeded"]) <= restraint["EndTime"]:
-            tempPeriod = Period("ALL WEEKS", day=dayToInt[restraint["Day"]], stime=stime,
+            tempPeriod = Period("EVERY WEEK", day=dayToInt[restraint["Day"]], stime=stime,
                                 etime=(stime + restraint["TimeNeeded"]))
-            tempLesson = Lecture(stime, "TimeRestrainModule " + str(i), tempPeriod)
+            tempLesson = Lecture("TimeRestrainModule " + str(i), stime, tempPeriod)
             mod.addLesson(tempLesson)
             stime += 30 if stime % 100 == 0 else 70
         i += 1
         modset.addModule(mod)
 
     return modset
+
 
 def getClashingModuleCount(allModuleSet, clashingModuleSet):
     clashingModuleCount = {}
@@ -712,6 +934,7 @@ def getClashingModuleCount(allModuleSet, clashingModuleSet):
 
     return clashingModuleCount
 
+
 def saveGeneratedListToFile(modList):
     fileN = open("test.txt", 'w')
     for mod in modList:
@@ -722,8 +945,7 @@ def saveGeneratedListToFile(modList):
 loadedData, deptToFac, preReqData = loadAllModData()
 print "done loading... deep copying..."
 modData = copy.deepcopy(loadedData)
-print "Num of mods: "+str(modData.getModuleCount())
-
+print "Num of mods: " + str(modData.getModuleCount())
 
 print("starting now...")
 # modList, testMods = generatePossibleModules(modCodeList, loadedData)
@@ -741,6 +963,6 @@ testModSet = createTimeBasedModules(timeRestrictions)
 clashingDict = getClashingModuleCount(modData, testModSet)
 print clashingDict
 # for mod in testModSet:
-    # for lesson in mod:
-    #     for p in lesson:
-            # print p
+# for lesson in mod:
+#     for p in lesson:
+# print p
