@@ -526,7 +526,7 @@ class Module(object):
         """
 
         assert issubclass(type(lesson), Lesson)
-        assert self.code != lesson.getModuleCode()
+        assert self.code == lesson.getModuleCode()
 
         self.lessons[lesson.getLessonType()].remove(lesson)
 
@@ -552,7 +552,7 @@ class Module(object):
         @return: Boolean value that tells if given lesson is an alternative or not
         """
 
-        for self_lesson in self.__iter__(type(lesson)):
+        for self_lesson in self.__iter__(lesson.getLessonType()):
             if self_lesson != lesson and self_lesson.isAlternative(lesson):
                 self_lesson.addAlternative(lesson)
                 return True
@@ -725,7 +725,9 @@ class Module(object):
         return self.getCode() >= other.getCode()
 
     def __iter__(self, lessonTypeFilter = "", excludeList=set()):
+
         if lessonTypeFilter != "":
+            assert lessonTypeFilter in self.LESSON_TYPES
             for lesson in self.lessons[lessonTypeFilter]:
                 if lesson.getId() not in excludeList:
                     yield lesson
@@ -790,58 +792,28 @@ modCodeList = {'ST2334': {"Lecture": "SL1", "Tutorial": "T1"}, 'SSA2209': {"Tuto
                'EE2024': {"Tutorial": "T9", 'Laboratory': 'B1'}, 'EE2023': {}, "EE2031": {'Laboratory': 'B2'}}
 
 
-def checkModuleAdding(testCode, noTimetableModCount):
-    filemods = open('timetabling/modsData.txt')
-    fileLtypes = open('timetabling/LtypesData.txt')
-
-    modsJson = json.load(filemods)
-    LtypesJson = json.load(fileLtypes)
-
-    filemods.close()
-    fileLtypes.close()
-
-    modSet = ModuleSet()
-
-    for modData in modsJson:
-        modcode = modData['ModuleCode']
-        if modcode != testCode:
-            continue
-        examDate = modData.get('ExamDate', '')
-        newmod = Module(modcode, examDate)
-        try:
-            for lesson in modData['Timetable']:
-                if lesson['LessonType'] == 'LABORATORY':
-                    newlesson = Laboratory(modcode, str(lesson['ClassNo']),
-                                           Period(0, stime=int(lesson['StartTime']), etime=int(lesson['EndTime']),
-                                                  day=dayToInt[lesson['DayText']]))
-                else:
-                    print(lesson['LessonType'])
-                    newlesson = eval(LtypesJson[lesson['LessonType']])(modcode, str(lesson['ClassNo']),
-                                                                       Period(0, stime=int(lesson['StartTime']),
-                                                                              etime=int(lesson['EndTime']),
-                                                                              day=dayToInt[lesson['DayText']]))
-                newmod.addLesson(newlesson)
-        except KeyError:
-            noTimetableModCount += 1
-
-    return newmod
-
-
 def loadAllModData():
+    """
+    Load all the json into local variables for manipulation
+    Data include module information such as module code, Timetable, Exam Dates, Pre-Requisites, etc
+        and conversion data from department to faculty and vice versa
+        and a reference to a list of available lesson types
+    @return:
+    """
+
     fileMods = open('../data/modInfo.json')
-    fileLtypes = open('LtypesData.txt')
+    fileLessonTypes = open('LtypesData.txt')
     fileDeptToFac = open('DepartmentToFaculty.txt')
 
     modsJson = json.load(fileMods)
-    LtypesJson = json.load(fileLtypes)
+    lessonTypesJson = json.load(fileLessonTypes)
     deptToFac = json.load(fileDeptToFac)
 
     fileMods.close()
-    fileLtypes.close()
+    fileLessonTypes.close()
     fileDeptToFac.close()
 
     modSet = ModuleSet()
-    noTimetableModCount = 0
 
     preReqData = {}
 
@@ -865,7 +837,7 @@ def loadAllModData():
                     else:
                         for lesson in [lessons for lessons in modData['Timetable'][currentSem] if
                                        modData['Timetable'][currentSem] != "Not Available."]:
-                            newlesson = eval(LtypesJson[lesson['LessonType']])(modcode, str(lesson['ClassNo']),
+                            newlesson = eval(lessonTypesJson[lesson['LessonType']])(modcode, str(lesson['ClassNo']),
                                                                                Period(0, stime=int(lesson['StartTime']),
                                                                                       etime=int(lesson['EndTime']),
                                                                                       day=dayToInt[lesson['DayText']]))
@@ -1048,3 +1020,41 @@ print clashingDict
 # for lesson in mod:
 #     for p in lesson:
 # print p
+
+## Testing code
+
+def checkModuleAdding(testCode, noTimetableModCount):
+    filemods = open('timetabling/modsData.txt')
+    fileLtypes = open('timetabling/LtypesData.txt')
+
+    modsJson = json.load(filemods)
+    LtypesJson = json.load(fileLtypes)
+
+    filemods.close()
+    fileLtypes.close()
+
+    modSet = ModuleSet()
+
+    for modData in modsJson:
+        modcode = modData['ModuleCode']
+        if modcode != testCode:
+            continue
+        examDate = modData.get('ExamDate', '')
+        newmod = Module(modcode, examDate)
+        try:
+            for lesson in modData['Timetable']:
+                if lesson['LessonType'] == 'LABORATORY':
+                    newlesson = Laboratory(modcode, str(lesson['ClassNo']),
+                                           Period(0, stime=int(lesson['StartTime']), etime=int(lesson['EndTime']),
+                                                  day=dayToInt[lesson['DayText']]))
+                else:
+                    print(lesson['LessonType'])
+                    newlesson = eval(LtypesJson[lesson['LessonType']])(modcode, str(lesson['ClassNo']),
+                                                                       Period(0, stime=int(lesson['StartTime']),
+                                                                              etime=int(lesson['EndTime']),
+                                                                              day=dayToInt[lesson['DayText']]))
+                newmod.addLesson(newlesson)
+        except KeyError:
+            noTimetableModCount += 1
+
+    return newmod
