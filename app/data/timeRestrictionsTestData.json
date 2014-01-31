@@ -1,0 +1,18 @@
+[{
+	"Day": "MONDAY",
+	"StartTime": 800,
+	"EndTime": 1200,
+	"TimeNeeded": 400
+},
+{
+	"Day": "TUESDAY",
+	"StartTime": 1200,
+	"EndTime": 1400,
+	"TimeNeeded": 200
+},
+{
+	"Day": "MONDAY",
+	"StartTime": 1400,
+	"EndTime": 1600,
+	"TimeNeeded": 200
+}]
