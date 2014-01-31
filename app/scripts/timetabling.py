@@ -530,7 +530,7 @@ class Module(object):
 
         self.lessons[lesson.getLessonType()].remove(lesson)
 
-    def removeAllBut(self, lessonType, group):
+    def removeAllExcept(self, lessonType, group):
         """
         @param lessonType: The lessonType to clear except for given Lesson group
         @param group: The group to keep as the compulsory Lesson
@@ -792,18 +792,10 @@ modCodeList = {'ST2334': {"Lecture": "SL1", "Tutorial": "T1"}, 'SSA2209': {"Tuto
                'EE2024': {"Tutorial": "T9", 'Laboratory': 'B1'}, 'EE2023': {}, "EE2031": {'Laboratory': 'B2'}}
 
 
-def loadAllModData():
-    """
-    Load all the json into local variables for manipulation
-    Data include module information such as module code, Timetable, Exam Dates, Pre-Requisites, etc
-        and conversion data from department to faculty and vice versa
-        and a reference to a list of available lesson types
-    @return:
-    """
-
+def getJsonDataFromFile():
     fileMods = open('../data/modInfo.json')
-    fileLessonTypes = open('LtypesData.txt')
-    fileDeptToFac = open('DepartmentToFaculty.txt')
+    fileLessonTypes = open('../data/lessonTypesReference.json')
+    fileDeptToFac = open('../data/departmentToFacultyConversion.json')
 
     modsJson = json.load(fileMods)
     lessonTypesJson = json.load(fileLessonTypes)
@@ -813,38 +805,69 @@ def loadAllModData():
     fileLessonTypes.close()
     fileDeptToFac.close()
 
-    modSet = ModuleSet()
+    return modsJson, lessonTypesJson, deptToFac
 
+def isNotValidModDataSet(modData):
+
+    isNotDict = not isinstance(modData, dict)
+    if isNotDict:
+        return True
+
+    hasInvalidExamDate = modData['ExamDate'] == "Not Applicable."
+    hasInvalidTimeTable = modData['Timetable'] == "Not Applicable."
+
+    if not hasInvalidExamDate:
+        hasNoExamDateThisSemester = not modData['ExamDate'].get(currentSem, '')
+    else:
+        return True
+
+    if not hasInvalidTimeTable:
+        isNotOfferedThisSemester = not modData['Timetable'].get(currentSem, [])
+    else:
+        return True
+
+    return hasNoExamDateThisSemester or isNotOfferedThisSemester
+
+def hasLessons(modData):
+    isList = isinstance(modData["Timetable"][currentSem], list)
+    hasLessonInDictFormat = all(isinstance(lesson, dict) for lesson in modData["Timetable"][currentSem])
+    return isList and hasLessonInDictFormat
+
+def loadAllModData():
+    """
+    Load all the json into local variables for manipulation
+    Data include module information such as module code, Timetable, Exam Dates, Pre-Requisites, etc
+        and conversion data from department to faculty and vice versa
+        and a reference to a list of available lesson types
+    @return:
+    """
+
+    modsJson, lessonTypesJson, deptToFac = getJsonDataFromFile()
+
+    modSet = ModuleSet()
     preReqData = {}
 
     for modcode, modData in modsJson.items():
         modcode = str(modcode)
-        if type(modData) == list or modData['ExamDate'] == "Not Applicable." or modData['ExamDate'].get(currentSem,
-                                                                                                        '') == '' or \
-                        modData['Timetable'] == "Not Applicable.":
-            continue
+        if isNotValidModDataSet(modData):
+            continue    # skip this iteration
+
+        ## Get Module Information
         examDate = modData['ExamDate'][currentSem]
         modDept = modData['Department']
-        newmod = Module(modcode, examDate, modDept)
+        newMod = Module(modcode, examDate, modDept)
+
+        ## Gather preRequisite Data for the module
         preReqData[modcode] = modData['Tree']['children']
-        try:
-            if isinstance(modData['Timetable'], dict):
-                if modData['Timetable'] == "Not Applicable.":
-                    continue
-                else:
-                    if not modData['Timetable'].get(currentSem, []):
-                        continue
-                    else:
-                        for lesson in [lessons for lessons in modData['Timetable'][currentSem] if
-                                       modData['Timetable'][currentSem] != "Not Available."]:
-                            newlesson = eval(lessonTypesJson[lesson['LessonType']])(modcode, str(lesson['ClassNo']),
-                                                                               Period(0, stime=int(lesson['StartTime']),
-                                                                                      etime=int(lesson['EndTime']),
-                                                                                      day=dayToInt[lesson['DayText']]))
-                            newmod.addLesson(newlesson)
-        except KeyError:
-            pass
-        modSet.addModule(newmod)
+
+        # try:
+        if hasLessons(modData):
+            currentSemesterTimetable = modData['Timetable'][currentSem]
+            for lesson in [lessons for lessons in currentSemesterTimetable]:
+                lessonPeriod = Period(0, stime=int(lesson['StartTime']), etime=int(lesson['EndTime']), day=dayToInt[lesson['DayText']])
+                newLesson = eval(lessonTypesJson[lesson['LessonType']])(modcode, str(lesson['ClassNo']), lessonPeriod)
+                newMod.addLesson(newLesson)
+        modSet.addModule(newMod)
     return modSet, deptToFac, preReqData
 
 
@@ -886,7 +909,7 @@ def getPreallocatedModuleList(masterModset, modInfoDict):
     for mod in masterModset:
         if mod.getCode() in modInfoDict.keys():
             for lessonType, group in modInfoDict[mod.getCode()].items():
-                mod.removeAllBut(lessonType, group)
+                mod.removeAllExcept(lessonType, group)
             modList.append(mod)
 
     return (modList, masterModset)
@@ -1021,7 +1044,10 @@ print clashingDict
 #     for p in lesson:
 # print p
 
-## Testing code
+####################
+### Testing code ###
+####################
+
 
 def checkModuleAdding(testCode, noTimetableModCount):
     filemods = open('timetabling/modsData.txt')
