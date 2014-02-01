@@ -966,9 +966,12 @@ def isGemModule(modcode):
 def isGekModule(modcode):
     return modcode[:3] == "GEK"
 
+def isSingaporeStudiesModule(modcode):
+    return modcode[:2] == "SS"
+
 
 def filterByModuleType(modset, moduleTypes, modulesToKeep):
-    moduleTypeFilters = {"GE": isGeModule, "Exposure": isExposureModule, "Technology": isTechnologyModule, "All": (lambda modcode: True)}
+    moduleTypeFilters = {"GE": isGeModule, "SS": isSingaporeStudiesModule, "Exposure": isExposureModule, "Technology": isTechnologyModule, "All": (lambda modcode: True)}
     moduleFilterFunction = lambda modcode: any(filterFunction(modcode) for filterType, filterFunction in moduleTypeFilters.items() if filterType in moduleTypes)
     modulesToRetain = []
     newModSet = ModuleSet()
