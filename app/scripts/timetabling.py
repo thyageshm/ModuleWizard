@@ -1,4 +1,4 @@
-import json, copy
+import json, copy,re
 from time import clock
 import abc
 
@@ -544,8 +544,6 @@ class Module(object):
                 self.lessons[lessonType] = [lesson]
                 break
 
-        raise AssertionError("Given lesson group does not exist")
-
     def hasAlternativeLesson(self, lesson):
         """
         @param lesson: Checks if a given lesson is an alternative to existing lesson. If so, adds it as an alternative
@@ -651,9 +649,12 @@ class Module(object):
         """
 
         # * delete for loop later *
+        lessonsToRemove = []
         for lesson in self:
             if self.hasAlternativeLesson(lesson):
-                self.removeLesson(lesson)
+                lessonsToRemove.append(lesson)
+        for lesson in lessonsToRemove:
+            self.removeLesson(lesson)
 
         self.actualLectureCount = self.getCurrentLectureCount()
         self.actualTutorialCount = self.getCurrentTutorialCount()
@@ -760,6 +761,10 @@ class ModuleSet(object):
         self.modules.append(module)
         self.moduleCount += 1
 
+    def mergeWithModSet(self, anotherModSet):
+        for mod in anotherModSet:
+            self.addModule(mod)
+
     def removeModule(self, code):
         assert isinstance(code, str)
 
@@ -788,8 +793,9 @@ class ModuleSet(object):
 ##Constants or hardcoded variables
 dayToInt = {"MONDAY": 1, "TUESDAY": 2, "WEDNESDAY": 3, "THURSDAY": 4, "FRIDAY": 5, "SATURDAY": 6, "SUNDAY": 7}
 facChoices = ['ENGINEERING']
-modCodeList = {'ST2334': {"Lecture": "SL1", "Tutorial": "T1"}, 'SSA2209': {"Tutorial": "D1"},
+modCodeList = {'ST2334': {"Lecture": "SL1", "Tutorial": "T1"}, 'SSA2209': {"Tutorial": "D3"},
                'EE2024': {"Tutorial": "T9", 'Laboratory': 'B1'}, 'EE2023': {}, "EE2031": {'Laboratory': 'B2'}}
+prevModCodeList = ['MA1505', 'MA1506', 'PC1432', 'CS1231', 'DSC2006', 'CG1101', 'CG1103', 'GEK1001', 'CS2103', 'CG1108', 'CG1413', 'DSC3202', 'EE2011', 'CS2104', 'CG2271', 'EE2020', 'EE2021']
 
 
 def getJsonDataFromFile():
@@ -846,19 +852,25 @@ def loadAllModData():
 
     modSet = ModuleSet()
     preReqData = {}
+    preclusionData = {}
 
     for modcode, modData in modsJson.items():
         modcode = str(modcode)
+
         if isNotValidModDataSet(modData):
+            #get preclusion data as long as it is available
+            if isinstance(modData, dict):
+                preclusionData[modcode] = modData['Preclusion'] if isinstance(modData['Preclusion'], list) else ["None"]
             continue    # skip this iteration
+
+        ## Gather preRequisite Data for the module
+        preReqData[modcode] = modData['Tree']['children']
+        preclusionData[modcode] = modData['Preclusion'] if isinstance(modData['Preclusion'], list) else ["None"]
 
         ## Get Module Information
         examDate = modData['ExamDate'][currentSem]
         modDept = modData['Department']
         newMod = Module(modcode, examDate, modDept)
-
-        ## Gather preRequisite Data for the module
-        preReqData[modcode] = modData['Tree']['children']
 
         # try:
         if hasLessons(modData):
@@ -868,29 +880,31 @@ def loadAllModData():
                 newLesson = eval(lessonTypesJson[lesson['LessonType']])(modcode, str(lesson['ClassNo']), lessonPeriod)
                 newMod.addLesson(newLesson)
         modSet.addModule(newMod)
-    return modSet, deptToFac, preReqData
+    return modSet, deptToFac, preReqData, preclusionData
 
 
-def generatePossibleModules(modInfoDict, masterModset):
+def generatePossibleModules(modInfoDict, masterModset, prevModCodeList):
+    masterModset = filterByLevel(masterModset, 3)
+    masterModset = filterByModuleType(masterModset, ["Exposure"], modInfoDict.keys())
     modList, masterModset = getPreallocatedModuleList(masterModset, modInfoDict)
+    masterModset = filterByPrereq(prevModCodeList, masterModset)
+    print masterModset.getModuleCount()
     masterModset = removeConflicts(modInfoDict.keys(), masterModset)
 
-    clock()
     flag = True
-
-    while (flag):
+    while flag:
         flag = False
         for mod in modList:
             for lesson in mod.getCompulsoryLessons():
-                for mod_del in masterModset:
-                    if mod is mod_del:
+                for modToDeleteFrom in masterModset:
+                    if mod is modToDeleteFrom:
                         continue
-                    lessonList = []
-                    for lesson_del in mod_del.getClashingLessons(lesson):
-                        lessonList.append(lesson_del)
+                    tempLessonListToDelete = []
+                    for lessonToDelete in modToDeleteFrom.getClashingLessons(lesson):
+                        tempLessonListToDelete.append(lessonToDelete)
+                    for lessonToDelete in tempLessonListToDelete:
+                        modToDeleteFrom.removeLesson(lessonToDelete)
                         flag = True
-                    for lessonToDelete in lessonList:
-                        mod_del.removeLesson(lessonToDelete)
         for tempMod in modList:
             if tempMod.getPossibleLessonsChoiceCount == 0:
                 print(tempMod.getCode())
@@ -898,7 +912,7 @@ def generatePossibleModules(modInfoDict, masterModset):
 
     possibleMods = []
     for mod in masterModset:
-        if (mod not in modList) and mod.getPossibleLessonsChoiceCount != 0:
+        if (mod not in modList) and mod.getPossibleLessonsChoiceCount() != 0:
             possibleMods.append(mod.getCode())
 
     return possibleMods, modList
@@ -912,24 +926,18 @@ def getPreallocatedModuleList(masterModset, modInfoDict):
                 mod.removeAllExcept(lessonType, group)
             modList.append(mod)
 
-    return (modList, masterModset)
+    return modList, masterModset
 
 
 def removeConflicts(mainModCodeList, masterModSet):
+    print [modCode for modCode in mainModCodeList if not masterModSet.getModule(modCode)]
     examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModCodeList]
     tempModSet = ModuleSet()
 
     for mod in masterModSet:
         if mod.getCode() not in mainModCodeList:
             if hasNoExamConflict(mod, examSlots) and isOfRightFaculty(mod):
-                lessonList = []
-                for lesson in mod:
-                    if isAtWrongTime(lesson):
-                        lessonList.append(lesson)
-                for lesson in lessonList:
-                    mod.removeLesson(lesson)
-                if mod.getPossibleLessonsChoiceCount == 0:
-                    tempModSet.addModule(mod)
+                pass
             else:
                 tempModSet.addModule(mod)
 
@@ -938,12 +946,60 @@ def removeConflicts(mainModCodeList, masterModSet):
 
     return masterModSet
 
+def isExposureModule(modcode):
+    return modcode[-1] == "E"
+
+
+def isTechnologyModule(modcode):
+    return modcode[-1] == "T"
+
+
+def isGeModule(modcode):
+    return isGemModule(modcode) or isGekModule(modcode)
+
+
+def isGemModule(modcode):
+
+    return modcode[:3] == "GEM"
+
+
+def isGekModule(modcode):
+    return modcode[:3] == "GEK"
+
+
+def filterByModuleType(modset, moduleTypes, modulesToKeep):
+    moduleTypeFilters = {"GE": isGeModule, "Exposure": isExposureModule, "Technology": isTechnologyModule, "All": (lambda modcode: True)}
+    moduleFilterFunction = lambda modcode: any(filterFunction(modcode) for filterType, filterFunction in moduleTypeFilters.items() if filterType in moduleTypes)
+    modulesToRetain = []
+    newModSet = ModuleSet()
+
+    for mod in modset:
+        if moduleFilterFunction(mod.getCode()) or mod.getCode() in modulesToKeep:
+            modulesToRetain.append(mod)
+
+    for mod in modulesToRetain:
+        newModSet.addModule(mod)
+
+    return newModSet
+
+
+def filterByLevel(modset, maxlevel):
+    modulesToDelete = []
+    for mod in modset:
+        if int([s for s in mod.getCode() if s.isdigit()][0]) > maxlevel:
+            modulesToDelete.append(mod.getCode())
+
+    for modcode in modulesToDelete:
+        modset.removeModule(modcode)
+
+    return modset
+
 
 def filterByPrereq(modCodeList, masterModSet):
     modsToRemove = []
     for mod in masterModSet:
         modCode = mod.getCode()
-        if not isEligibleByPrereq(modCode, modCodeList):
+        if modCode in modCodeList or not isEligibleByPrereq(modCode, modCodeList):
             modsToRemove.append(modCode)
 
     for modCode in modsToRemove:
@@ -954,7 +1010,10 @@ def filterByPrereq(modCodeList, masterModSet):
 
 def isEligibleByPrereq(modCodeToTake, modCodesAlreadyTaken):
     preReqDict = preReqData[modCodeToTake]
-    return satisfiesPrereq(preReqDict, modCodesAlreadyTaken)
+    if not preReqDict:
+        return True
+    else:
+        return satisfiesPrereq(preReqDict[0], modCodesAlreadyTaken)
 
 
 def hasNoExamConflict(mod, examSlots):
@@ -1005,7 +1064,7 @@ def getClashingModuleCount(allModuleSet, clashingModuleSet):
         for clashingLesson in clashingMod:
             print clashingLesson.getId()
             for mod in allModuleSet:
-                for lesson in mod.getClashingLessons(clashingLesson):
+                for _ in mod.getClashingLessons(clashingLesson):
                     clashingModuleCount[clashingMod.getCode()] += 1
                     break
 
@@ -1019,26 +1078,50 @@ def saveGeneratedListToFile(modList):
     fileN.close()
 
 
-loadedData, deptToFac, preReqData = loadAllModData()
-print "done loading... deep copying..."
-modData = copy.deepcopy(loadedData)
-print "Num of mods: " + str(modData.getModuleCount())
+def generationSequencer(loadedData, modCodeList, prevModCodeList, timeRestrictions = {}):
+    print "deep copying..."
+    modData = copy.deepcopy(loadedData)
+    print "adding time restrictions..."
+    if not timeRestrictions:
+        timeRestrictionsFile = open("../data/timeRestrictionsTestData.json")
+        timeRestrictions = json.load(timeRestrictionsFile)
+    testModSet = createTimeBasedModules(timeRestrictions)
+    print "merging normal mod Data with time restriction modules"
+    modData.mergeWithModSet(testModSet)
+    for mod in testModSet:
+        modCodeList[mod.getCode()] = {}
+        preReqData[mod.getCode()] = []
 
-print("starting now...")
-# modList, testMods = generatePossibleModules(modCodeList, loadedData)
+    prevModCodeList = addPreclusionToPrevMods(prevModCodeList, preclusionData)
+    print "Generating possible modules..."
+    modList, testMods = generatePossibleModules(modCodeList, modData, prevModCodeList)
+    print "Number of possible mods: " + str(len(modList))
+    for modcode in modList:
+        print modcode
+    return modList, testMods
+
+
+def addPreclusionToPrevMods (prevModCodeList, preclusionData):
+    newPrevModList = []
+    for modcode in prevModCodeList:
+        newPrevModList += [modcode] + preclusionData[modcode]
+
+    return newPrevModList
+
+print "loading data..."
+loadedData, deptToFac, preReqData, preclusionData = loadAllModData()
+print "Num of mods: " + str(loadedData.getModuleCount())
+modList, testMods = generationSequencer(loadedData, modCodeList, prevModCodeList)
 # saveGeneratedListToFile(modList)
 
 # mod = checkModuleAdding("YLS1201", 0)
 # mod.setBaseparams()
 
-timeRestrictionsFile = open("../data/timeRestrictionsTestData.json")
-timeRestrictions = json.load(timeRestrictionsFile)
-
 ## timeRestrictions = [{"Day": "MONDAY", "StartTime": 1200, "EndTime": 1400, "TimeNeeded": 30}]
 
-testModSet = createTimeBasedModules(timeRestrictions)
-clashingDict = getClashingModuleCount(modData, testModSet)
-print clashingDict
+# testModSet = createTimeBasedModules(timeRestrictions)
+# clashingDict = getClashingModuleCount(loadedData, testModSet)
+# print clashingDict
 # for mod in testModSet:
 # for lesson in mod:
 #     for p in lesson:
