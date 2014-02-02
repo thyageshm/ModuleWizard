@@ -1897,13 +1897,13 @@
     }, 
     {
         "tokens": [
-            "Readings", 
-            "in", 
-            "Modern", 
-            "Japanese", 
-            "JS4207"
+            "Tax", 
+            "Planning", 
+            "And", 
+            "Policy", 
+            "LL4056B"
         ], 
-        "value": "JS4207 Readings in Modern Japanese"
+        "value": "LL4056B Tax Planning And Policy"
     }, 
     {
         "tokens": [
@@ -2792,14 +2792,13 @@
     }, 
     {
         "tokens": [
-            "Orchestral", 
-            "Repertoire", 
-            "for", 
-            "Brass", 
-            "2A", 
-            "MUA2180"
+            "Agile", 
+            "Software", 
+            "Project", 
+            "Management", 
+            "SG5231"
         ], 
-        "value": "MUA2180 Orchestral Repertoire for Brass 2A"
+        "value": "SG5231 Agile Software Project Management"
     }, 
     {
         "tokens": [
@@ -2856,13 +2855,12 @@
     }, 
     {
         "tokens": [
-            "Topics", 
-            "in", 
-            "Grammatical", 
-            "Theory", 
-            "EL6880"
+            "APPLIED", 
+            "FORECASTING", 
+            "METHODS", 
+            "IE5202"
         ], 
-        "value": "EL6880 Topics in Grammatical Theory"
+        "value": "IE5202 APPLIED FORECASTING METHODS"
     }, 
     {
         "tokens": [
@@ -5968,19 +5966,6 @@
             "MUA1170"
         ], 
         "value": "MUA1170 Basic Recording 1"
-    }, 
-    {
-        "tokens": [
-            "Topics", 
-            "in", 
-            "CP:", 
-            "Religion", 
-            "and", 
-            "Global", 
-            "Change", 
-            "PS4881E"
-        ], 
-        "value": "PS4881E Topics in CP: Religion and Global Change"
     }, 
     {
         "tokens": [
@@ -12779,16 +12764,6 @@
     }, 
     {
         "tokens": [
-            "Agile", 
-            "Software", 
-            "Project", 
-            "Management", 
-            "SG5231"
-        ], 
-        "value": "SG5231 Agile Software Project Management"
-    }, 
-    {
-        "tokens": [
             "From", 
             "the", 
             "Wheel", 
@@ -15298,6 +15273,19 @@
     }, 
     {
         "tokens": [
+            "Topics", 
+            "in", 
+            "CP:", 
+            "Religion", 
+            "and", 
+            "Global", 
+            "Change", 
+            "PS4881E"
+        ], 
+        "value": "PS4881E Topics in CP: Religion and Global Change"
+    }, 
+    {
+        "tokens": [
             "SOCIAL", 
             "THEORY", 
             "IN", 
@@ -17633,6 +17621,17 @@
     }, 
     {
         "tokens": [
+            "Orchestral", 
+            "Repertoire", 
+            "for", 
+            "Brass", 
+            "2A", 
+            "MUA2180"
+        ], 
+        "value": "MUA2180 Orchestral Repertoire for Brass 2A"
+    }, 
+    {
+        "tokens": [
             "Quantitative", 
             "Reasoning", 
             "Foundation:", 
@@ -18300,14 +18299,13 @@
     }, 
     {
         "tokens": [
-            "Special", 
-            "topics", 
+            "Topics", 
             "in", 
-            "Biological", 
-            "Sciences", 
-            "BL5224"
+            "Grammatical", 
+            "Theory", 
+            "EL6880"
         ], 
-        "value": "BL5224 Special topics in Biological Sciences"
+        "value": "EL6880 Topics in Grammatical Theory"
     }, 
     {
         "tokens": [
@@ -19094,15 +19092,6 @@
             "EC3551"
         ], 
         "value": "EC3551 FASS Undergraduate Research Opportunity (UROP)"
-    }, 
-    {
-        "tokens": [
-            "APPLIED", 
-            "FORECASTING", 
-            "METHODS", 
-            "IE5202"
-        ], 
-        "value": "IE5202 APPLIED FORECASTING METHODS"
     }, 
     {
         "tokens": [
@@ -21566,6 +21555,17 @@
             "BMA5330"
         ], 
         "value": "BMA5330 Topics in Finance: Trading and Investing in Commodities"
+    }, 
+    {
+        "tokens": [
+            "Special", 
+            "topics", 
+            "in", 
+            "Biological", 
+            "Sciences", 
+            "BL5224"
+        ], 
+        "value": "BL5224 Special topics in Biological Sciences"
     }, 
     {
         "tokens": [
@@ -24502,13 +24502,13 @@
     }, 
     {
         "tokens": [
-            "Tax", 
-            "Planning", 
-            "And", 
-            "Policy", 
-            "LL4056B"
+            "Readings", 
+            "in", 
+            "Modern", 
+            "Japanese", 
+            "JS4207"
         ], 
-        "value": "LL4056B Tax Planning And Policy"
+        "value": "JS4207 Readings in Modern Japanese"
     }, 
     {
         "tokens": [

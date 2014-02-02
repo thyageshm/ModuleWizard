@@ -5,6 +5,7 @@ import abc
 ##Start of class hierarchy
 
 currentSem = 'Sem2'
+timeToDeepCopy = 0
 
 class TimeSlot(object):
     """
@@ -481,11 +482,12 @@ class Module(object):
 
     LESSON_TYPES = ["Lecture", "Tutorial", "Laboratory"]
 
-    def __init__(self, code, examDate, dept):
+    def __init__(self, code, examDate, dept, level):
         """
             @param code: refers to the module code in string
             @param examDate: the examDate in string ("DD/MM/YYYY hh:mm AM/PM")
             @param dept: refers to the department the module belongs to, in string
+            @param level: refers to the level of modules (eg 1 for CS1231)
             @return: creates a module object with given params
         """
 
@@ -498,6 +500,7 @@ class Module(object):
         self.code = code                                                     # The module code
         self.examDate = examDate                                             # The exam date
         self.dept = dept                                                     # The department
+        self.level = level                                                   # The module level
         self.actualLectureCount = 0                                          # The num of lectures in the module
         self.actualTutorialCount = 0                                         # The num of tutorials in the module
         self.actualLabCount = 0                                              # The num of laboratories in the module
@@ -621,6 +624,9 @@ class Module(object):
 
     def getDepartment(self):
         return self.dept
+
+    def getLevel(self):
+        return self.level
 
     def getPossibleLessonsChoiceCount(self):
         """
@@ -751,27 +757,27 @@ class ModuleSet(object):
         @author: Thyagesh Manikandan
     """
     def __init__(self):
-        self.modules = []
+        self.modules = {}
         self.moduleCount = 0
 
     def addModule(self, module):
         assert isinstance(module, Module)
 
         module.setBaseparams()
-        self.modules.append(module)
+        self.modules[module.getCode()] = module
         self.moduleCount += 1
 
     def mergeWithModSet(self, anotherModSet):
         for mod in anotherModSet:
+            if not isinstance(mod, Module):
+                print mod
             self.addModule(mod)
 
     def removeModule(self, code):
         assert isinstance(code, str)
 
-        module = self.getModule(code)
-        if module:
-            self.modules.remove(module)
-            self.moduleCount -= 1
+        del self.modules[code]
+        self.moduleCount -= 1
 
     def getModuleCount(self):
         return self.moduleCount
@@ -782,7 +788,7 @@ class ModuleSet(object):
                 return module
 
     def __iter__(self):
-        for module in self.modules:
+        for module in self.modules.values():
             yield module
 
 ##-----------------------------------------------------------------------------------------------------------------------
@@ -870,7 +876,8 @@ def loadAllModData():
         ## Get Module Information
         examDate = modData['ExamDate'][currentSem]
         modDept = modData['Department']
-        newMod = Module(modcode, examDate, modDept)
+        level = modData["Level"];
+        newMod = Module(modcode, examDate, modDept, level)
 
         # try:
         if hasLessons(modData):
@@ -883,16 +890,28 @@ def loadAllModData():
     return modSet, deptToFac, preReqData, preclusionData
 
 
-def generatePossibleModules(modInfoDict, masterModset, prevModCodeList):
-    masterModset = filterByLevel(masterModset, 3)
-    masterModset = filterByModuleType(masterModset, ["Exposure"], modInfoDict.keys())
-    modList, masterModset = getPreallocatedModuleList(masterModset, modInfoDict)
+def filterByAllCriteria(masterModset, maxLevel, modTypes, modInfoDict, prevModCodeList):
+    print str(clock() - timeToDeepCopy)
+    masterModset = filterByLevel(masterModset, maxLevel)
+    print str(clock() - timeToDeepCopy)
+    masterModset = filterByModuleType(masterModset, modTypes, modInfoDict.keys())
+    print str(clock() - timeToDeepCopy)
     masterModset = filterByPrereq(prevModCodeList, masterModset)
+    print str(clock() - timeToDeepCopy)
+
+    return masterModset
+
+def generatePossibleModules(modInfoDict, masterModset, prevModCodeList):
+    print "beginning filter", str(clock() - timeToDeepCopy)
+    masterModset = filterByAllCriteria(masterModset, 3, ["Exposure"], modInfoDict, prevModCodeList)
+    print "done filter", str(clock() - timeToDeepCopy)
+    modList, masterModset = getPreallocatedModuleList(masterModset, modInfoDict)
     print masterModset.getModuleCount()
     masterModset = removeConflicts(modInfoDict.keys(), masterModset)
 
     flag = True
     while flag:
+        print "beginning conflict resolution: ", str(clock() - timeToDeepCopy)
         flag = False
         for mod in modList:
             for lesson in mod.getCompulsoryLessons():
@@ -905,6 +924,7 @@ def generatePossibleModules(modInfoDict, masterModset, prevModCodeList):
                     for lessonToDelete in tempLessonListToDelete:
                         modToDeleteFrom.removeLesson(lessonToDelete)
                         flag = True
+        print "done resolution", str(clock() - timeToDeepCopy)
         for tempMod in modList:
             if tempMod.getPossibleLessonsChoiceCount == 0:
                 print(tempMod.getCode())
@@ -959,12 +979,12 @@ def isGeModule(modcode):
 
 
 def isGemModule(modcode):
-
     return modcode[:3] == "GEM"
 
 
 def isGekModule(modcode):
     return modcode[:3] == "GEK"
+
 
 def isSingaporeStudiesModule(modcode):
     return modcode[:2] == "SS"
@@ -987,11 +1007,13 @@ def filterByModuleType(modset, moduleTypes, modulesToKeep):
 
 
 def filterByLevel(modset, maxlevel):
+    print "in level filter"
     modulesToDelete = []
     for mod in modset:
-        if int([s for s in mod.getCode() if s.isdigit()][0]) > maxlevel:
+        firstNumInModCode = int(mod.getLevel())
+        if firstNumInModCode > maxlevel:
             modulesToDelete.append(mod.getCode())
-
+    print "removing modules", str(clock() - timeToDeepCopy)
     for modcode in modulesToDelete:
         modset.removeModule(modcode)
 
@@ -1046,7 +1068,7 @@ def createTimeBasedModules(timeRestraints):
     i = 1
     modset = ModuleSet()
     for restraint in timeRestraints:
-        mod = Module("TimeRestrainModule " + str(i), "Not Available.", "COMPUTING & ENGINEERING")
+        mod = Module("TimeRestrainModule " + str(i), "Not Available.", "COMPUTING & ENGINEERING",1)
         stime = restraint["StartTime"]
         while (stime + restraint["TimeNeeded"]) <= restraint["EndTime"]:
             tempPeriod = Period("EVERY WEEK", day=dayToInt[restraint["Day"]], stime=stime,
@@ -1082,23 +1104,25 @@ def saveGeneratedListToFile(modList):
 
 
 def generationSequencer(loadedData, modCodeList, prevModCodeList, timeRestrictions = {}):
+    clock()
     print "deep copying..."
     modData = copy.deepcopy(loadedData)
-    print "adding time restrictions..."
+    timeToDeepCopy = clock()
+    print "adding time restrictions...", str(timeToDeepCopy)
     if not timeRestrictions:
         timeRestrictionsFile = open("../data/timeRestrictionsTestData.json")
         timeRestrictions = json.load(timeRestrictionsFile)
     testModSet = createTimeBasedModules(timeRestrictions)
-    print "merging normal mod Data with time restriction modules"
+    print "merging normal mod Data with time restriction modules", str(clock() - timeToDeepCopy)
     modData.mergeWithModSet(testModSet)
     for mod in testModSet:
         modCodeList[mod.getCode()] = {}
         preReqData[mod.getCode()] = []
 
     prevModCodeList = addPreclusionToPrevMods(prevModCodeList, preclusionData)
-    print "Generating possible modules..."
+    print "Generating possible modules...", str(clock() - timeToDeepCopy)
     modList, testMods = generatePossibleModules(modCodeList, modData, prevModCodeList)
-    print "Number of possible mods: " + str(len(modList))
+    print "Number of possible mods: " + str(len(modList)), str(clock() - timeToDeepCopy)
     for modcode in modList:
         print modcode
     return modList, testMods
@@ -1110,6 +1134,7 @@ def addPreclusionToPrevMods (prevModCodeList, preclusionData):
         newPrevModList += [modcode] + preclusionData[modcode]
 
     return newPrevModList
+
 
 print "loading data..."
 loadedData, deptToFac, preReqData, preclusionData = loadAllModData()

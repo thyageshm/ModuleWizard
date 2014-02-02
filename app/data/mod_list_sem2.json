@@ -14210,6 +14210,14 @@
     }, 
     {
         "tokens": [
+            "Doctoral", 
+            "Seminars", 
+            "SMA6779"
+        ], 
+        "value": "SMA6779 Doctoral Seminars"
+    }, 
+    {
+        "tokens": [
             "Global", 
             "Issues", 
             "GL1101E"
@@ -21676,12 +21684,13 @@
     }, 
     {
         "tokens": [
-            "ADVANCED", 
-            "TISSUE", 
-            "ENGINEERING", 
-            "BN5203"
+            "Designing", 
+            "with", 
+            "Environmental", 
+            "Systems", 
+            "AR2724"
         ], 
-        "value": "BN5203 ADVANCED TISSUE ENGINEERING"
+        "value": "AR2724 Designing with Environmental Systems"
     }, 
     {
         "tokens": [
@@ -22258,13 +22267,12 @@
     }, 
     {
         "tokens": [
-            "Designing", 
-            "with", 
-            "Environmental", 
-            "Systems", 
-            "AR2724"
+            "ADVANCED", 
+            "TISSUE", 
+            "ENGINEERING", 
+            "BN5203"
         ], 
-        "value": "AR2724 Designing with Environmental Systems"
+        "value": "BN5203 ADVANCED TISSUE ENGINEERING"
     }, 
     {
         "tokens": [
