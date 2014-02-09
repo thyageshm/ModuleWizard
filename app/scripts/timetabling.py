@@ -891,27 +891,28 @@ def loadAllModData():
 
 
 def filterByAllCriteria(masterModset, maxLevel, modTypes, modInfoDict, prevModCodeList):
-    print str(clock() - timeToDeepCopy)
-    masterModset = filterByLevel(masterModset, maxLevel)
-    print str(clock() - timeToDeepCopy)
+    startLevelFilterTime = clock()
+    masterModset = filterByLevel(masterModset, maxLevel, modInfoDict.keys())
+    startModuleTypeFilterTime = clock()
+    print "Level Filter Time: ", str(startModuleTypeFilterTime - startLevelFilterTime)
     masterModset = filterByModuleType(masterModset, modTypes, modInfoDict.keys())
-    print str(clock() - timeToDeepCopy)
+    startPrereqFilterTime = clock()
+    print "Module Type Filter Time: ", str(startPrereqFilterTime - startModuleTypeFilterTime)
     masterModset = filterByPrereq(prevModCodeList, masterModset)
-    print str(clock() - timeToDeepCopy)
+    print "Prereq Filter Time: ", str(clock() - startPrereqFilterTime)
 
     return masterModset
 
+
 def generatePossibleModules(modInfoDict, masterModset, prevModCodeList):
-    print "beginning filter", str(clock() - timeToDeepCopy)
     masterModset = filterByAllCriteria(masterModset, 3, ["Exposure"], modInfoDict, prevModCodeList)
-    print "done filter", str(clock() - timeToDeepCopy)
     modList, masterModset = getPreallocatedModuleList(masterModset, modInfoDict)
-    print masterModset.getModuleCount()
+#    print masterModset.getModuleCount()
     masterModset = removeConflicts(modInfoDict.keys(), masterModset)
 
     flag = True
     while flag:
-        print "beginning conflict resolution: ", str(clock() - timeToDeepCopy)
+        conflictStartTime = clock()
         flag = False
         for mod in modList:
             for lesson in mod.getCompulsoryLessons():
@@ -924,35 +925,46 @@ def generatePossibleModules(modInfoDict, masterModset, prevModCodeList):
                     for lessonToDelete in tempLessonListToDelete:
                         modToDeleteFrom.removeLesson(lessonToDelete)
                         flag = True
-        print "done resolution", str(clock() - timeToDeepCopy)
+        preAllocCheckStartTime = clock()
+        print "done resolution", str(preAllocCheckStartTime - conflictStartTime)
         for tempMod in modList:
             if tempMod.getPossibleLessonsChoiceCount == 0:
                 print(tempMod.getCode())
                 print("Pre allocated Modules cannot be taken together!!")
+        print "done prealloc Check: ", str(clock() - preAllocCheckStartTime)
 
+    startModListCollection = clock()
     possibleMods = []
     for mod in masterModset:
         if (mod not in modList) and mod.getPossibleLessonsChoiceCount() != 0:
             possibleMods.append(mod.getCode())
 
+    print "Done Collecting Mod List: ", str(clock() - startModListCollection)
     return possibleMods, modList
 
 
 def getPreallocatedModuleList(masterModset, modInfoDict):
     modList = []
+    preallocStartTime = clock()
     for mod in masterModset:
         if mod.getCode() in modInfoDict.keys():
             for lessonType, group in modInfoDict[mod.getCode()].items():
                 mod.removeAllExcept(lessonType, group)
             modList.append(mod)
-
+    print "Time Taken for Prereq Calc: ", str(clock() - preallocStartTime)
     return modList, masterModset
 
 
 def removeConflicts(mainModCodeList, masterModSet):
-    print [modCode for modCode in mainModCodeList if not masterModSet.getModule(modCode)]
+#   print [modCode for modCode in mainModCodeList if not masterModSet.getModule(modCode)]
+    examSlotsTime = clock()
+
     examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModCodeList]
     tempModSet = ModuleSet()
+
+    examTimeConflictStartTime = clock()
+
+    print "Examslots time: ", str(examTimeConflictStartTime - examSlotsTime)
 
     for mod in masterModSet:
         if mod.getCode() not in mainModCodeList:
@@ -963,6 +975,8 @@ def removeConflicts(mainModCodeList, masterModSet):
 
     for mod in tempModSet:
         masterModSet.removeModule(mod.getCode())
+
+    print "Exam and Time Conflict Time: ", str(clock() - examTimeConflictStartTime)
 
     return masterModSet
 
@@ -1006,14 +1020,12 @@ def filterByModuleType(modset, moduleTypes, modulesToKeep):
     return newModSet
 
 
-def filterByLevel(modset, maxlevel):
-    print "in level filter"
+def filterByLevel(modset, maxlevel, modulesToKeep):
     modulesToDelete = []
     for mod in modset:
         firstNumInModCode = int(mod.getLevel())
-        if firstNumInModCode > maxlevel:
+        if firstNumInModCode > maxlevel and mod.getCode() not in modulesToKeep:
             modulesToDelete.append(mod.getCode())
-    print "removing modules", str(clock() - timeToDeepCopy)
     for modcode in modulesToDelete:
         modset.removeModule(modcode)
 
@@ -1047,10 +1059,6 @@ def hasNoExamConflict(mod, examSlots):
 
 def isOfRightFaculty(mod):
     return deptToFac[mod.getDepartment()] in facChoices
-
-
-def isAtWrongTime(lesson):
-    return any(lesson.hasSlot(timeslot) for timeslot in timeRestrictions)
 
 
 def satisfiesPrereq(child, modList):
@@ -1108,19 +1116,20 @@ def generationSequencer(loadedData, modCodeList, prevModCodeList, timeRestrictio
     print "deep copying..."
     modData = copy.deepcopy(loadedData)
     timeToDeepCopy = clock()
-    print "adding time restrictions...", str(timeToDeepCopy)
+    print "time to deep copy...", str(timeToDeepCopy)
     if not timeRestrictions:
         timeRestrictionsFile = open("../data/timeRestrictionsTestData.json")
         timeRestrictions = json.load(timeRestrictionsFile)
     testModSet = createTimeBasedModules(timeRestrictions)
-    print "merging normal mod Data with time restriction modules", str(clock() - timeToDeepCopy)
+    startOfMergeTime = clock()
+    print "loading and adding time based modules: ", str(startOfMergeTime - timeToDeepCopy)
     modData.mergeWithModSet(testModSet)
     for mod in testModSet:
         modCodeList[mod.getCode()] = {}
         preReqData[mod.getCode()] = []
-
+    print "merging time based mods and general mods: ", str(clock() - startOfMergeTime)
     prevModCodeList = addPreclusionToPrevMods(prevModCodeList, preclusionData)
-    print "Generating possible modules...", str(clock() - timeToDeepCopy)
+    print "Generating Modules..."
     modList, testMods = generatePossibleModules(modCodeList, modData, prevModCodeList)
     print "Number of possible mods: " + str(len(modList)), str(clock() - timeToDeepCopy)
     for modcode in modList:
