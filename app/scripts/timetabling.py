@@ -400,6 +400,9 @@ class Lesson(object):
         else:
             return False
 
+    def clashesWith(self, otherLesson):
+        return any(otherLesson.hasSlot(timeslot) for period in self for timeslot in period)
+
     def __str__(self):
         return "ID: " + self.getId()
 
@@ -547,6 +550,10 @@ class Module(object):
                 self.lessons[lessonType] = [lesson]
                 break
 
+
+    def doesNotClash(self, otherLessons):
+        return all(any(not self_lesson.clashesWith(lesson) for lesson in otherLessons for self_lesson in self.__iter__(lessonType)) for lessonType in self.LESSON_TYPES if self.getActualLessonCount(lessonType) > 0)
+
     def hasAlternativeLesson(self, lesson):
         """
         @param lesson: Checks if a given lesson is an alternative to existing lesson. If so, adds it as an alternative
@@ -595,9 +602,11 @@ class Module(object):
             if lesson.hasSlot(timeslot):
                 yield lesson
 
+
+
     def getClashingLessons(self, otherLesson):
         """
-        @param otherLesson: The Lesson object to be check for overlap
+        @param conflictLesson: The Lesson object to be check for overlap
         @return:
         """
 
@@ -606,13 +615,12 @@ class Module(object):
         conflictSet = set()
         for period in otherLesson:
             for timeslot in period:
-                for otherLesson in self.getLessonsOccupyingTimeSlot(timeslot):
-                    conflictSet.add(otherLesson.getId())
+                for conflictLesson in self.getLessonsOccupyingTimeSlot(timeslot):
+                    conflictSet.add(conflictLesson)
 
         ## A separate for loop to avoid repetitions in lessons
-        for otherLesson in self:
-            if otherLesson.getId() in conflictSet:
-                yield otherLesson
+        if conflictLesson in conflictSet:
+            yield conflictLesson
 
     def getLesson(self, lessonId):
         ## only check in the list of lessons that are of the same type (Lec/Tut/Lab)
@@ -692,6 +700,9 @@ class Module(object):
 
     def getCurrentLabCount(self):
         return len(self.lessons["Laboratory"])
+
+    def getActualLessonCount(self, lessonType):
+        return len(self.lessons[lessonType])
 
     def getLessonsOfType(self, lessonType):
         assert lessonType in self.LESSON_TYPES
@@ -890,53 +901,22 @@ def loadAllModData():
     return modSet, deptToFac, preReqData, preclusionData
 
 
-def filterByAllCriteria(masterModset, maxLevel, modTypes, modInfoDict, prevModCodeList):
-    startLevelFilterTime = clock()
-    masterModset = filterByLevel(masterModset, maxLevel, modInfoDict.keys())
-    startModuleTypeFilterTime = clock()
-    print "Level Filter Time: ", str(startModuleTypeFilterTime - startLevelFilterTime)
-    masterModset = filterByModuleType(masterModset, modTypes, modInfoDict.keys())
-    startPrereqFilterTime = clock()
-    print "Module Type Filter Time: ", str(startPrereqFilterTime - startModuleTypeFilterTime)
-    masterModset = filterByPrereq(prevModCodeList, masterModset)
-    print "Prereq Filter Time: ", str(clock() - startPrereqFilterTime)
-
-    return masterModset
-
-
 def generatePossibleModules(modInfoDict, masterModset, prevModCodeList):
     masterModset = filterByAllCriteria(masterModset, 3, ["Exposure"], modInfoDict, prevModCodeList)
     modList, masterModset = getPreallocatedModuleList(masterModset, modInfoDict)
 #    print masterModset.getModuleCount()
     masterModset = removeConflicts(modInfoDict.keys(), masterModset)
 
-    flag = True
-    while flag:
-        conflictStartTime = clock()
-        flag = False
-        for mod in modList:
-            for lesson in mod.getCompulsoryLessons():
-                for modToDeleteFrom in masterModset:
-                    if mod is modToDeleteFrom:
-                        continue
-                    tempLessonListToDelete = []
-                    for lessonToDelete in modToDeleteFrom.getClashingLessons(lesson):
-                        tempLessonListToDelete.append(lessonToDelete)
-                    for lessonToDelete in tempLessonListToDelete:
-                        modToDeleteFrom.removeLesson(lessonToDelete)
-                        flag = True
-        preAllocCheckStartTime = clock()
-        print "done resolution", str(preAllocCheckStartTime - conflictStartTime)
-        for tempMod in modList:
-            if tempMod.getPossibleLessonsChoiceCount == 0:
-                print(tempMod.getCode())
-                print("Pre allocated Modules cannot be taken together!!")
-        print "done prealloc Check: ", str(clock() - preAllocCheckStartTime)
+    compulsoryLessons = []
+    for mod in modList:
+        for lesson in mod.getCompulsoryLessons():
+            compulsoryLessons.append(lesson)
+
 
     startModListCollection = clock()
     possibleMods = []
     for mod in masterModset:
-        if (mod not in modList) and mod.getPossibleLessonsChoiceCount() != 0:
+        if mod not in modList and mod.doesNotClash(compulsoryLessons):
             possibleMods.append(mod.getCode())
 
     print "Done Collecting Mod List: ", str(clock() - startModListCollection)
@@ -955,30 +935,49 @@ def getPreallocatedModuleList(masterModset, modInfoDict):
     return modList, masterModset
 
 
-def removeConflicts(mainModCodeList, masterModSet):
-#   print [modCode for modCode in mainModCodeList if not masterModSet.getModule(modCode)]
-    examSlotsTime = clock()
+def filterByAllCriteria(masterModset, maxLevel, modTypes, modInfoDict, prevModCodeList):
+    startLevelFilterTime = clock()
+    masterModset = filterByLevel(masterModset, maxLevel, modInfoDict.keys())
+    startModuleTypeFilterTime = clock()
+    print "Level Filter Time: ", str(startModuleTypeFilterTime - startLevelFilterTime)
 
-    examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModCodeList]
-    tempModSet = ModuleSet()
+    masterModset = filterByModuleType(masterModset, modTypes, modInfoDict.keys())
+    startPrereqFilterTime = clock()
+    print "Module Type Filter Time: ", str(startPrereqFilterTime - startModuleTypeFilterTime)
 
-    examTimeConflictStartTime = clock()
+    masterModset = filterByPrereq(prevModCodeList, masterModset)
+    print "Prereq Filter Time: ", str(clock() - startPrereqFilterTime)
 
-    print "Examslots time: ", str(examTimeConflictStartTime - examSlotsTime)
+    return masterModset
 
-    for mod in masterModSet:
-        if mod.getCode() not in mainModCodeList:
-            if hasNoExamConflict(mod, examSlots) and isOfRightFaculty(mod):
-                pass
-            else:
-                tempModSet.addModule(mod)
 
-    for mod in tempModSet:
-        masterModSet.removeModule(mod.getCode())
+def filterByLevel(modset, maxlevel, modulesToKeep):
+    modulesToDelete = []
+    for mod in modset:
+        firstNumInModCode = int(mod.getLevel())
+        if firstNumInModCode > maxlevel and mod.getCode() not in modulesToKeep:
+            modulesToDelete.append(mod.getCode())
+    for modcode in modulesToDelete:
+        modset.removeModule(modcode)
 
-    print "Exam and Time Conflict Time: ", str(clock() - examTimeConflictStartTime)
+    return modset
 
-    return masterModSet
+
+def filterByModuleType(modset, moduleTypes, modulesToKeep):
+    moduleTypeFilters = {"GE": isGeModule, "SS": isSingaporeStudiesModule, "Exposure": isExposureModule, "Technology": isTechnologyModule, "All": (lambda modcode: True)}
+    moduleFilterFunction = lambda modcode: any(filterFunction(modcode) for filterType, filterFunction in moduleTypeFilters.items() if filterType in moduleTypes)
+    modulesToRetain = []
+    newModSet = ModuleSet()
+
+    for mod in modset:
+        if moduleFilterFunction(mod.getCode()) or mod.getCode() in modulesToKeep:
+            modulesToRetain.append(mod)
+
+    for mod in modulesToRetain:
+        newModSet.addModule(mod)
+
+    return newModSet
+
 
 def isExposureModule(modcode):
     return modcode[-1] == "E"
@@ -1004,34 +1003,6 @@ def isSingaporeStudiesModule(modcode):
     return modcode[:2] == "SS"
 
 
-def filterByModuleType(modset, moduleTypes, modulesToKeep):
-    moduleTypeFilters = {"GE": isGeModule, "SS": isSingaporeStudiesModule, "Exposure": isExposureModule, "Technology": isTechnologyModule, "All": (lambda modcode: True)}
-    moduleFilterFunction = lambda modcode: any(filterFunction(modcode) for filterType, filterFunction in moduleTypeFilters.items() if filterType in moduleTypes)
-    modulesToRetain = []
-    newModSet = ModuleSet()
-
-    for mod in modset:
-        if moduleFilterFunction(mod.getCode()) or mod.getCode() in modulesToKeep:
-            modulesToRetain.append(mod)
-
-    for mod in modulesToRetain:
-        newModSet.addModule(mod)
-
-    return newModSet
-
-
-def filterByLevel(modset, maxlevel, modulesToKeep):
-    modulesToDelete = []
-    for mod in modset:
-        firstNumInModCode = int(mod.getLevel())
-        if firstNumInModCode > maxlevel and mod.getCode() not in modulesToKeep:
-            modulesToDelete.append(mod.getCode())
-    for modcode in modulesToDelete:
-        modset.removeModule(modcode)
-
-    return modset
-
-
 def filterByPrereq(modCodeList, masterModSet):
     modsToRemove = []
     for mod in masterModSet:
@@ -1053,14 +1024,6 @@ def isEligibleByPrereq(modCodeToTake, modCodesAlreadyTaken):
         return satisfiesPrereq(preReqDict[0], modCodesAlreadyTaken)
 
 
-def hasNoExamConflict(mod, examSlots):
-    return mod.getExamDate() == "Not Available." or mod.getExamDate() not in examSlots
-
-
-def isOfRightFaculty(mod):
-    return deptToFac[mod.getDepartment()] in facChoices
-
-
 def satisfiesPrereq(child, modList):
     if not child:
         return True
@@ -1070,6 +1033,40 @@ def satisfiesPrereq(child, modList):
         return any(satisfiesPrereq(c1, modList) for c1 in child['children'])
     else:
         return child['name'] in modList
+
+
+def removeConflicts(mainModCodeList, masterModSet):
+#   print [modCode for modCode in mainModCodeList if not masterModSet.getModule(modCode)]
+    examSlotsTime = clock()
+
+    examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModCodeList]
+    tempModSet = ModuleSet()
+
+    examTimeConflictStartTime = clock()
+
+    print "Examslots time: ", str(examTimeConflictStartTime - examSlotsTime)
+
+    for mod in masterModSet:
+        if mod.getCode() not in mainModCodeList:
+            if hasNoExamConflict(mod, examSlots) and isOfRightFaculty(mod):
+                pass
+            else:
+                tempModSet.addModule(mod)
+
+    for mod in tempModSet:
+        masterModSet.removeModule(mod.getCode())
+
+    print "Exam and Faculty Conflict Time: ", str(clock() - examTimeConflictStartTime)
+
+    return masterModSet
+
+
+def hasNoExamConflict(mod, examSlots):
+    return mod.getExamDate() == "Not Available." or mod.getExamDate() not in examSlots
+
+
+def isOfRightFaculty(mod):
+    return deptToFac[mod.getDepartment()] in facChoices
 
 
 def createTimeBasedModules(timeRestraints):
