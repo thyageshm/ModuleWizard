@@ -771,10 +771,12 @@ class ModuleSet(object):
         self.modules = {}
         self.moduleCount = 0
 
-    def addModule(self, module):
+    def addModule(self, module, hasSetParams = False):
         assert isinstance(module, Module)
 
-        module.setBaseparams()
+        if not hasSetParams:
+            module.setBaseparams()
+
         self.modules[module.getCode()] = module
         self.moduleCount += 1
 
@@ -782,7 +784,7 @@ class ModuleSet(object):
         for mod in anotherModSet:
             if not isinstance(mod, Module):
                 print mod
-            self.addModule(mod)
+            self.addModule(mod, True)
 
     def removeModule(self, code):
         assert isinstance(code, str)
@@ -902,7 +904,8 @@ def loadAllModData():
 
 
 def generatePossibleModules(modInfoDict, masterModset, prevModCodeList):
-    masterModset = filterByAllCriteria(masterModset, 3, ["Exposure"], modInfoDict, prevModCodeList)
+    masterModset = filterByAllCriteria(masterModset, 3, ["All"], modInfoDict, prevModCodeList)
+    print "Master Count: ", masterModset.getModuleCount()
     modList, masterModset = getPreallocatedModuleList(masterModset, modInfoDict)
 #    print masterModset.getModuleCount()
     masterModset = removeConflicts(modInfoDict.keys(), masterModset)
@@ -940,14 +943,14 @@ def filterByAllCriteria(masterModset, maxLevel, modTypes, modInfoDict, prevModCo
     masterModset = filterByLevel(masterModset, maxLevel, modInfoDict.keys())
     startModuleTypeFilterTime = clock()
     print "Level Filter Time: ", str(startModuleTypeFilterTime - startLevelFilterTime)
-
+    print "Master Count1: ", masterModset.getModuleCount()
     masterModset = filterByModuleType(masterModset, modTypes, modInfoDict.keys())
     startPrereqFilterTime = clock()
     print "Module Type Filter Time: ", str(startPrereqFilterTime - startModuleTypeFilterTime)
-
+    print "Master Count2: ", masterModset.getModuleCount()
     masterModset = filterByPrereq(prevModCodeList, masterModset)
     print "Prereq Filter Time: ", str(clock() - startPrereqFilterTime)
-
+    print "Master Count3: ", masterModset.getModuleCount()
     return masterModset
 
 
@@ -957,26 +960,26 @@ def filterByLevel(modset, maxlevel, modulesToKeep):
         firstNumInModCode = int(mod.getLevel())
         if firstNumInModCode > maxlevel and mod.getCode() not in modulesToKeep:
             modulesToDelete.append(mod.getCode())
+
     for modcode in modulesToDelete:
         modset.removeModule(modcode)
-
     return modset
 
 
 def filterByModuleType(modset, moduleTypes, modulesToKeep):
     moduleTypeFilters = {"GE": isGeModule, "SS": isSingaporeStudiesModule, "Exposure": isExposureModule, "Technology": isTechnologyModule, "All": (lambda modcode: True)}
     moduleFilterFunction = lambda modcode: any(filterFunction(modcode) for filterType, filterFunction in moduleTypeFilters.items() if filterType in moduleTypes)
-    modulesToRetain = []
-    newModSet = ModuleSet()
+    modulesToDelete = []
 
     for mod in modset:
-        if moduleFilterFunction(mod.getCode()) or mod.getCode() in modulesToKeep:
-            modulesToRetain.append(mod)
+        modCode = mod.getCode()
+        if not moduleFilterFunction(modCode) and (modCode not in modulesToKeep):
+            modulesToDelete.append(modCode)
 
-    for mod in modulesToRetain:
-        newModSet.addModule(mod)
+    for modCode in modulesToDelete:
+        modset.removeModule(modCode)
 
-    return newModSet
+    return modset
 
 
 def isExposureModule(modcode):
@@ -1040,7 +1043,7 @@ def removeConflicts(mainModCodeList, masterModSet):
     examSlotsTime = clock()
 
     examSlots = [masterModSet.getModule(modCode).getExamDate() for modCode in mainModCodeList]
-    tempModSet = ModuleSet()
+    modListToDelete = []
 
     examTimeConflictStartTime = clock()
 
@@ -1051,10 +1054,10 @@ def removeConflicts(mainModCodeList, masterModSet):
             if hasNoExamConflict(mod, examSlots) and isOfRightFaculty(mod):
                 pass
             else:
-                tempModSet.addModule(mod)
+                modListToDelete.append(mod.getCode())
 
-    for mod in tempModSet:
-        masterModSet.removeModule(mod.getCode())
+    for modCode in modListToDelete:
+        masterModSet.removeModule(modCode)
 
     print "Exam and Faculty Conflict Time: ", str(clock() - examTimeConflictStartTime)
 
@@ -1108,12 +1111,13 @@ def saveGeneratedListToFile(modList):
     fileN.close()
 
 
-def generationSequencer(loadedData, modCodeList, prevModCodeList, timeRestrictions = {}):
+def generationSequencer(data, modCodeList, prevModCodeList, timeRestrictions = {}):
     clock()
-    print "deep copying..."
-    modData = copy.deepcopy(loadedData)
+    print "copying..."
+    modData = ModuleSet()
+    modData.mergeWithModSet(data)
     timeToDeepCopy = clock()
-    print "time to deep copy...", str(timeToDeepCopy)
+    print "time to copy...", str(timeToDeepCopy)
     if not timeRestrictions:
         timeRestrictionsFile = open("../data/timeRestrictionsTestData.json")
         timeRestrictions = json.load(timeRestrictionsFile)
@@ -1144,6 +1148,8 @@ def addPreclusionToPrevMods (prevModCodeList, preclusionData):
 
 print "loading data..."
 loadedData, deptToFac, preReqData, preclusionData = loadAllModData()
+print "Num of mods: " + str(loadedData.getModuleCount())
+modList, testMods = generationSequencer(loadedData, modCodeList, prevModCodeList)
 print "Num of mods: " + str(loadedData.getModuleCount())
 modList, testMods = generationSequencer(loadedData, modCodeList, prevModCodeList)
 # saveGeneratedListToFile(modList)
